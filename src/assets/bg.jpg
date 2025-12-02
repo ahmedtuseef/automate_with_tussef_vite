@@ -1,0 +1,13 @@
+// src/pages/MainDashboard.jsx
+import React from 'react';
+
+export default function MainDashboard(){
+  return (
+    <div className="page-root">
+      <div className="glass-card">
+        <h2 className="title">Dashboard</h2>
+        <p className="muted">You are signed in (mock)</p>
+      </div>
+    </div>
+  );
+}

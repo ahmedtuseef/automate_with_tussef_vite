@@ -1,0 +1,138 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap");
+
+:root {
+  --bg1: #031026;
+  --bg2: #0b2b5d;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body,
+html,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: Inter, system-ui, Arial;
+}
+
+body {
+  background: linear-gradient(180deg, var(--bg1), var(--bg2));
+}
+
+.page-root {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* ---------------- Glass Card ------------------ */
+
+.glass-card {
+  width: 100%;
+  max-width: 520px;
+  padding: 28px;
+  border-radius: 14px;
+
+  background: rgba(255, 255, 255, 0.03);
+
+  /* Blur support for all browsers */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 10px 30px rgba(2, 6, 23, 0.6);
+}
+
+.start-card {
+  max-width: 700px;
+  text-align: center;
+  padding: 48px;
+}
+
+.title {
+  margin: 0 0 8px 0;
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.muted {
+  margin: 0 0 18px 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* ---------------- Form Text ------------------ */
+
+.lg-h {
+  margin: 0 0 8px 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.lg-sub {
+  margin: 0 0 16px 0;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* ---------------- Inputs ------------------ */
+
+.lg-inp {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  color: white;
+}
+
+/* ---------------- Buttons ------------------ */
+
+.lg-btn {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: none;
+
+  cursor: pointer;
+
+  background: linear-gradient(90deg, #6fb8ff, #4f9efb);
+  color: #05263e;
+  font-weight: 800;
+}
+
+.lg-btn.ghost {
+  background: transparent;
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.lg-err {
+  background: rgba(255, 100, 100, 0.12);
+  color: #ffdede;
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.big-btn {
+  padding: 14px 22px;
+  border-radius: 999px;
+  border: none;
+
+  background: linear-gradient(90deg, #7fe0ff, #5b9fff);
+  font-weight: 800;
+  color: #05263e;
+
+  cursor: pointer;
+}
+
+@media (max-width: 640px) {
+  .glass-card {
+    padding: 18px;
+  }
+}
