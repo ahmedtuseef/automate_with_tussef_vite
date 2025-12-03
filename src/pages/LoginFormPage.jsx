@@ -5,6 +5,18 @@ import { useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../firebase';
 
+// BackButton component should exist at src/components/BackButton.jsx
+// It must call `navigate(-1)` on click. Example implementation:
+// export default function BackButton({ label = '←', styleOverride = {} }) {
+//   const navigate = useNavigate();
+//   return (
+//     <button onClick={() => navigate(-1)} aria-label="Back" style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: 18, cursor: 'pointer', padding: '4px 8px', ...styleOverride }}>
+//       {label}
+//     </button>
+//   );
+// }
+import BackButton from "../components/BackButton";
+
 export default function LoginFormPage(){
   const navigate = useNavigate();
 
@@ -96,10 +108,16 @@ export default function LoginFormPage(){
     <div className="app-shell">
 
       {/* TOP NAV */}
-      <nav className="top-nav">
-        <div className="logo" style={{ fontWeight: 800, fontSize: 20, letterSpacing: 0.4 }}>
-          Learn with <span style={{ color: '#cfeefc' }}>Tuseef</span>
+      <nav className="top-nav" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 28px', backdropFilter: 'blur(6px)', background: 'linear-gradient(180deg, rgba(2,6,23,0.55), rgba(2,6,23,0.25))' }}>
+        {/* Back arrow placed inside nav (left of logo) */}
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <BackButton label="←" styleOverride={{ fontSize: 18, fontWeight: 800, color: '#fff' }} />
         </div>
+
+        <div className="logo" style={{ fontWeight: 800, fontSize: 20, letterSpacing: 0.4, color: '#f8fafc', marginLeft: 6 }}>
+          Balance <span style={{ color: '#cfeefc' }}>board</span>
+        </div>
+
         <div className="menu" style={{ marginLeft: 'auto' }}>
           <a href="#home">Home</a>
           <a href="#about">About</a>

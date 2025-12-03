@@ -6,6 +6,7 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 
 import { auth } from "../firebase";
+import BackButton from "../components/BackButton";
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ export default function SignupPage() {
     password: "",
     confirm: "",
     agree: false,
-    username: ""
+    username: "",
   });
 
   const [errors, setErrors] = useState({});
@@ -36,7 +37,8 @@ export default function SignupPage() {
     if (!form.firstName.trim()) e.firstName = "First name is required";
     if (!form.lastName.trim()) e.lastName = "Last name is required";
     if (!form.email.trim()) e.email = "Email is required";
-    else if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = "Enter a valid email";
+    else if (!/^\S+@\S+\.\S+$/.test(form.email))
+      e.email = "Enter a valid email";
     if (!form.phone.trim()) e.phone = "Phone is required";
     else if (!/^[0-9\-\+\s()]{7,20}$/.test(form.phone))
       e.phone = "Enter a valid phone";
@@ -105,7 +107,10 @@ export default function SignupPage() {
     } catch (err) {
       console.error("Signup error:", err);
       // friendly messages for common Firebase errors
-      const msg = (err && err.code) ? firebaseErrorMessage(err.code) : (err.message || "Signup failed");
+      const msg =
+        err && err.code
+          ? firebaseErrorMessage(err.code)
+          : err.message || "Signup failed";
       alert(msg);
     } finally {
       setSubmitting(false);
@@ -130,10 +135,39 @@ export default function SignupPage() {
 
   return (
     <div className="app-shell">
-      <nav className="top-nav">
-        <div className="logo" style={{ fontWeight: 800, fontSize: 20, letterSpacing: 0.4 }}>
-          Learn with <span style={{ color: '#cfeefc' }}>Tuseef</span>
+      <nav
+        className="top-nav"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          padding: "14px 28px",
+          backdropFilter: "blur(6px)",
+          background:
+            "linear-gradient(180deg, rgba(2,6,23,0.55), rgba(2,6,23,0.25))",
+        }}
+      >
+        {/* Back arrow placed inside nav (left of logo) */}
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <BackButton
+            label="←"
+            styleOverride={{ fontSize: 18, fontWeight: 800, color: "#fff" }}
+          />
         </div>
+
+        <div
+          className="logo"
+          style={{
+            fontWeight: 800,
+            fontSize: 20,
+            letterSpacing: 0.4,
+            marginLeft: 6,
+            color: "#f8fafc",
+          }}
+        >
+          Balance <span style={{ color: "#cfeefc" }}>board</span>
+        </div>
+
         <div className="menu" style={{ marginLeft: "auto" }}>
           <a href="#home">Home</a>
           <a href="#about">About</a>
@@ -162,7 +196,9 @@ export default function SignupPage() {
               }}
             >
               <div>
-                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                <label
+                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
+                >
                   First name *
                 </label>
                 <input
@@ -179,7 +215,9 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                <label
+                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
+                >
                   Middle name (optional)
                 </label>
                 <input
@@ -191,7 +229,9 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                <label
+                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
+                >
                   Last name *
                 </label>
                 <input
@@ -217,7 +257,9 @@ export default function SignupPage() {
               }}
             >
               <div>
-                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                <label
+                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
+                >
                   Email *
                 </label>
                 <input
@@ -235,7 +277,9 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                <label
+                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
+                >
                   Phone *
                 </label>
                 <input
@@ -255,7 +299,9 @@ export default function SignupPage() {
 
             <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                <label
+                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
+                >
                   Date of birth *
                 </label>
                 <input
@@ -273,7 +319,9 @@ export default function SignupPage() {
               </div>
 
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                <label
+                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
+                >
                   Username (optional)
                 </label>
                 <input
@@ -294,7 +342,9 @@ export default function SignupPage() {
               }}
             >
               <div>
-                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                <label
+                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
+                >
                   Password *
                 </label>
                 <input
@@ -312,7 +362,9 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                <label
+                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
+                >
                   Confirm password *
                 </label>
                 <input

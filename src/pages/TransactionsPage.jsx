@@ -17,6 +17,7 @@ import {
 
 import { db, auth } from "../firebase";
 import TransactionForm from "../components/TransactionForm";
+import BackButton from "../components/BackButton"; // ← ADDED
 
 // Inline self-contained summary-cards component so no external import needed
 function TransactionsWithCards({ stats = {} }) {
@@ -236,9 +237,17 @@ export default function TransactionsPage({ user }) {
   return (
     <div style={{ minHeight: "80vh", padding: 24, display: "flex", justifyContent: "center" }}>
       <div style={{ width: "100%", maxWidth: 1100 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        {/* TOP HEADER — BACK + PAGE TITLE + USER INFO */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+
+          {/* 🔙 Back Button */}
+          <BackButton label="←" />
+
+          {/* PAGE TITLE */}
           <h2 style={{ color: "#fff", margin: 0 }}>Transactions</h2>
-          <div style={{ color: "#fff", opacity: 0.9 }}>
+
+          {/* RIGHT SIDE — USER INFO */}
+          <div style={{ marginLeft: "auto", color: "#fff", opacity: 0.9 }}>
             {currentUser ? `Signed in as: ${currentUser.email || currentUser.displayName}` : "Not signed in"}
           </div>
         </div>

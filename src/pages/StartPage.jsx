@@ -1,6 +1,7 @@
 // src/pages/StartPage.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import BackButton from "../components/BackButton";
 
 export default function StartPage() {
   const navigate = useNavigate();
@@ -20,6 +21,7 @@ export default function StartPage() {
         background: "url('/background.jpg') center/cover no-repeat",
         display: "flex",
         flexDirection: "column",
+        position: "relative",
       }}
     >
       {/* TOP NAV */}
@@ -28,13 +30,21 @@ export default function StartPage() {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 20,
+          gap: 12,
           padding: "14px 28px",
           backdropFilter: "blur(6px)",
           background:
             "linear-gradient(180deg, rgba(2,6,23,0.55), rgba(2,6,23,0.25))",
         }}
       >
+        {/* Back arrow placed inside nav (left of logo) */}
+        <div style={{ display: "flex", alignItems: "center" }}>
+          <BackButton
+            label="←"
+            styleOverride={{ fontSize: 20, fontWeight: 900, color: "#fff" }}
+          />
+        </div>
+
         <div
           className="logo"
           style={{
@@ -42,6 +52,7 @@ export default function StartPage() {
             fontSize: 20,
             letterSpacing: 0.4,
             color: "#f8fafc",
+            marginLeft: 6,
           }}
         >
           <span style={{ color: "#cfeefc" }}>Tuseef</span> Dashboard
@@ -90,7 +101,7 @@ export default function StartPage() {
             background: colors.cardBg,
           }}
         >
-          {/* Left Content */}
+          {/* LEFT SECTION */}
           <div style={{ flex: 1, color: "#fff" }}>
             <h1
               style={{
@@ -130,14 +141,8 @@ export default function StartPage() {
               <li>Monthly totals, balance overview and history</li>
             </ul>
 
-            {/* ONLY ONE BUTTON REMAINS */}
-            <div
-              style={{
-                marginTop: 22,
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
+            {/* MAIN BUTTON */}
+            <div style={{ marginTop: 22 }}>
               <button
                 onClick={() => navigate("/login")}
                 style={{
@@ -169,7 +174,7 @@ export default function StartPage() {
             </div>
           </div>
 
-          {/* Right Text Box */}
+          {/* RIGHT BOX */}
           <aside
             style={{
               width: 320,
