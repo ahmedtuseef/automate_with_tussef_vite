@@ -131,8 +131,8 @@ export default function SignupPage() {
   return (
     <div className="app-shell">
       <nav className="top-nav">
-        <div className="brand-logo3" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
-          Learn With <span>Tuseef</span>
+        <div className="logo" style={{ fontWeight: 800, fontSize: 20, letterSpacing: 0.4 }}>
+          Learn with <span style={{ color: '#cfeefc' }}>Tuseef</span>
         </div>
         <div className="menu" style={{ marginLeft: "auto" }}>
           <a href="#home">Home</a>

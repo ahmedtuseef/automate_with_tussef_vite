@@ -1,62 +1,59 @@
 // src/pages/MainDashboard.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth } from "../firebase";
-import { signOut } from "firebase/auth";
+import ProfileMenu from "../components/ProfileMenu"; // <-- make sure path is correct
+import { auth } from "../firebase"; // still useful if you need currentUser fallback
 
-export default function MainDashboard() {
+export default function MainDashboard({ user, onLogout }) {
   const navigate = useNavigate();
   const [userName, setUserName] = useState("");
 
   useEffect(() => {
-    if (!auth.currentUser) return;
-    const user = auth.currentUser;
+    // Prefer the user prop (passed from App). If not available, fallback to firebase auth currentUser.
+    const u = user || auth.currentUser;
+    if (!u) {
+      setUserName("");
+      return;
+    }
 
     // Priority: displayName > email prefix
-    if (user.displayName) {
-      setUserName(user.displayName);
-    } else {
-      const prefix = user.email.split("@")[0];
+    if (u.displayName) {
+      setUserName(u.displayName);
+    } else if (u.email) {
+      const prefix = u.email.split("@")[0];
       setUserName(prefix.charAt(0).toUpperCase() + prefix.slice(1));
+    } else {
+      setUserName("User");
     }
-  }, []);
+  }, [user]);
 
-  function logoutNow() {
-    signOut(auth)
-      .then(() => navigate("/login"))
-      .catch(() => alert("Logout failed, try again."));
+  // If you still want a logout button fallback (not necessary if using ProfileMenu)
+  function fallbackLogout() {
+    if (onLogout) return onLogout();
+    // else redirect to login
+    navigate("/login");
   }
 
   return (
     <div className="app-shell">
-
       {/* TOP NAV */}
-      <nav className="top-nav">
-        <div className="brand-logo3" style={{ cursor: "pointer" }} onClick={() => navigate("/")}>
-          Learn With <span>Tuseef</span>
+      <nav className="top-nav" style={{ display: "flex", alignItems: "center", padding: "12px 20px" }}>
+        <div className="logo" style={{ fontWeight: 800, fontSize: 20, letterSpacing: 0.4 }}>
+          Learn with <span style={{ color: "#cfeefc" }}>Tuseef</span>
         </div>
 
         <div className="menu" style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 20 }}>
-          <span style={{ opacity: 0.9, fontSize: 15 }}>Hi, <strong>{userName}</strong></span>
-          <button
-            onClick={logoutNow}
-            style={{
-              padding: "6px 16px",
-              background: "rgba(255,255,255,0.12)",
-              border: "1px solid rgba(255,255,255,0.2)",
-              color: "#fff",
-              borderRadius: 10,
-              cursor: "pointer"
-            }}
-          >
-            Logout
-          </button>
+          <span style={{ opacity: 0.9, fontSize: 15 }}>
+            Hi, <strong>{userName}</strong>
+          </span>
+
+          {/* Profile dropdown component (Edit Profile / Logout) */}
+          <ProfileMenu user={user} onLogout={onLogout || fallbackLogout} />
         </div>
       </nav>
 
       {/* CENTER WRAPPER */}
-      <div className="center-wrapper" style={{ flexDirection: "column", gap: 24, paddingTop: 120 }}>
-
+      <div className="center-wrapper" style={{ display: "flex", alignItems: "center", flexDirection: "column", gap: 24, paddingTop: 120 }}>
         {/* WELCOME CARD */}
         <div
           className="glass-card"
@@ -64,12 +61,10 @@ export default function MainDashboard() {
             width: "90%",
             maxWidth: 850,
             padding: 32,
-            textAlign: "center"
+            textAlign: "center",
           }}
         >
-          <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 8 }}>
-            Welcome, {userName}! 👋
-          </h1>
+          <h1 style={{ fontSize: 36, fontWeight: 800, marginBottom: 8 }}>Welcome, {userName}! 👋</h1>
           <p style={{ fontSize: 16, opacity: 0.9 }}>
             Your automation dashboard is ready. Explore tools, activity, and insights.
           </p>
