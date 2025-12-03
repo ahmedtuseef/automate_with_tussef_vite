@@ -14,18 +14,29 @@ export default function TransactionForm({ initial = null, onSave }) {
 
   useEffect(() => {
     if (initial) {
+      let dateISO = new Date().toISOString().slice(0, 10);
+
+      try {
+        if (initial.date) {
+          if (typeof initial.date.toDate === "function") {
+            dateISO = initial.date.toDate().toISOString().slice(0, 10);
+          } else {
+            dateISO = new Date(initial.date).toISOString().slice(0, 10);
+          }
+        }
+      } catch (e) {
+        dateISO = new Date().toISOString().slice(0, 10);
+      }
+
       setForm({
         type: initial.type || "expense",
-        amount: initial.amount || "",
+        amount: initial.amount != null ? String(initial.amount) : "",
         category: initial.category || "",
-        date: initial.date
-          ? new Date(initial.date).toISOString().slice(0, 10)
-          : new Date().toISOString().slice(0, 10),
+        date: dateISO,
         note: initial.note || "",
       });
       setMsg(null);
     } else {
-      // reset form when no initial
       setForm((f) => ({ ...f, amount: "", category: "", note: "" }));
     }
   }, [initial]);
@@ -51,10 +62,8 @@ export default function TransactionForm({ initial = null, onSave }) {
       setMsg({ type: "error", text: err });
       return;
     }
-
     setLoading(true);
     try {
-      // prepare payload
       const payload = {
         type: form.type,
         amount: Number(form.amount),
@@ -63,17 +72,15 @@ export default function TransactionForm({ initial = null, onSave }) {
         note: form.note,
       };
       await onSave(payload);
-      if (!initial) {
-        // clear only when adding a new one (not editing)
+      if (!initial)
         setForm((f) => ({ ...f, amount: "", category: "", note: "" }));
-      }
       setMsg({ type: "success", text: "Saved." });
     } catch (err) {
       console.error("TransactionForm save error:", err);
       setMsg({ type: "error", text: err.message || "Save failed." });
     } finally {
       setLoading(false);
-      setTimeout(() => setMsg(null), 1300);
+      setTimeout(() => setMsg(null), 1200);
     }
   }
 
@@ -100,7 +107,7 @@ export default function TransactionForm({ initial = null, onSave }) {
           name="type"
           value={form.type}
           onChange={update}
-          style={{ padding: 8, borderRadius: 6 }}
+          style={{ padding: 8, borderRadius: 6, minWidth: 120 }}
         >
           <option value="expense">Expense</option>
           <option value="income">Income</option>
@@ -111,7 +118,12 @@ export default function TransactionForm({ initial = null, onSave }) {
           value={form.amount}
           onChange={update}
           placeholder="Amount"
-          style={{ flex: 1, padding: 8, borderRadius: 6 }}
+          style={{
+            flex: 1,
+            padding: 8,
+            borderRadius: 6,
+            border: "1px solid #ccc",
+          }}
         />
       </div>
 
@@ -120,7 +132,7 @@ export default function TransactionForm({ initial = null, onSave }) {
         value={form.category}
         onChange={update}
         placeholder="Category (Food / Rent)"
-        style={{ padding: 8, borderRadius: 6 }}
+        style={{ padding: 8, borderRadius: 6, border: "1px solid #ccc" }}
       />
 
       <input
@@ -128,7 +140,7 @@ export default function TransactionForm({ initial = null, onSave }) {
         type="date"
         value={form.date}
         onChange={update}
-        style={{ padding: 8, borderRadius: 6 }}
+        style={{ padding: 8, borderRadius: 6, border: "1px solid #ccc" }}
       />
 
       <textarea
@@ -137,23 +149,42 @@ export default function TransactionForm({ initial = null, onSave }) {
         onChange={update}
         placeholder="Note (optional)"
         rows={3}
-        style={{ padding: 8, borderRadius: 6 }}
+        style={{ padding: 8, borderRadius: 6, border: "1px solid #ccc" }}
       />
 
-      <button
-        type="submit"
-        disabled={loading}
-        style={{
-          padding: "10px 12px",
-          borderRadius: 8,
-          border: "none",
-          background: initial ? "#0b7b5b" : "#c0392b",
-          color: "#fff",
-          cursor: loading ? "not-allowed" : "pointer",
-        }}
-      >
-        {loading ? "Saving..." : "Save"}
-      </button>
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            flex: 1,
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: "none",
+            background: "#0b7b5b",
+            color: "#fff",
+            cursor: loading ? "not-allowed" : "pointer",
+          }}
+        >
+          {loading ? "Saving..." : "Save"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (!initial)
+              setForm({
+                type: "expense",
+                amount: "",
+                category: "",
+                date: new Date().toISOString().slice(0, 10),
+                note: "",
+              });
+          }}
+          style={{ padding: "10px 12px", borderRadius: 8 }}
+        >
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }
