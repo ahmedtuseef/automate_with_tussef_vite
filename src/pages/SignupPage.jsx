@@ -1,122 +1,385 @@
 // src/pages/SignupPage.jsx
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { registerNewUser } from "../utils/auth";
 
-function SignupPage() {
-  const [first, setFirst] = useState("");
-  const [middle, setMiddle] = useState(""); // optional
-  const [last, setLast] = useState("");
-  const [username, setUsername] = useState("");
-  const [dob, setDob] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const dobRef = useRef(null);
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
+
+import { auth } from "../firebase";
+
+export default function SignupPage() {
   const navigate = useNavigate();
 
-  // auto-generate username
-  useEffect(() => {
-    const parts = [];
-    if (first.trim()) parts.push(first.trim().toLowerCase());
-    if (middle.trim()) parts.push(middle.trim().toLowerCase());
-    if (last.trim()) parts.push(last.trim().toLowerCase());
-    setUsername(parts.join("."));
-  }, [first, middle, last]);
+  const [form, setForm] = useState({
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    dob: "",
+    password: "",
+    confirm: "",
+    agree: false,
+    username: ""
+  });
 
-  const openDatePicker = () => {
-    if (!dobRef.current) return;
-    if (typeof dobRef.current.showPicker === "function") {
-      try {
-        dobRef.current.showPicker();
-        return;
-      } catch (e) {}
-    }
-    dobRef.current.focus();
-  };
+  const [errors, setErrors] = useState({});
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleCreate = async (e) => {
+  function update(field, value) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
+  }
+
+  function validate() {
+    const e = {};
+    if (!form.firstName.trim()) e.firstName = "First name is required";
+    if (!form.lastName.trim()) e.lastName = "Last name is required";
+    if (!form.email.trim()) e.email = "Email is required";
+    else if (!/^\S+@\S+\.\S+$/.test(form.email)) e.email = "Enter a valid email";
+    if (!form.phone.trim()) e.phone = "Phone is required";
+    else if (!/^[0-9\-\+\s()]{7,20}$/.test(form.phone))
+      e.phone = "Enter a valid phone";
+    if (!form.dob) e.dob = "Date of birth is required";
+    if (!form.password) e.password = "Password is required";
+    else if (form.password.length < 6) e.password = "Password must be 6+ chars";
+    if (!form.confirm) e.confirm = "Please confirm password";
+    else if (form.password !== form.confirm)
+      e.confirm = "Passwords do not match";
+    if (!form.agree) e.agree = "You must agree to Terms";
+    return e;
+  }
+
+  async function onSubmit(e) {
     e.preventDefault();
-    setError("");
-
-    if (!first.trim()) return setError("First name required");
-    if (!last.trim()) return setError("Last name required");
-    if (!dob) return setError("Date of birth required");
-    if (!password || password.length < 6)
-      return setError("Password must be 6+ characters");
-
-    setLoading(true);
-    try {
-      const newUser = await registerNewUser({
-        first,
-        middle: middle || null,
-        last,
-        dob,
-        mobile: mobile || null,
-        password,
-      });
-      // success — registerNewUser auto-sets current user
-      navigate("/dashboard");
-    } catch (err) {
-      if (err && err.message === "username_taken") {
-        setError("Username already exists. Try a different name.");
-      } else {
-        setError("Failed to create account. Try again.");
-        console.error(err);
-      }
-    } finally {
-      setLoading(false);
+    const eobj = validate();
+    if (Object.keys(eobj).length) {
+      setErrors(eobj);
+      return;
     }
-  };
+
+    setSubmitting(true);
+
+    try {
+      // Create user with Firebase Auth
+      const userCred = await createUserWithEmailAndPassword(
+        auth,
+        form.email.trim(),
+        form.password
+      );
+
+      const user = userCred.user;
+
+      // update displayName (First Last)
+      try {
+        const displayName = `${form.firstName.trim()} ${form.lastName.trim()}`;
+        await updateProfile(user, { displayName });
+      } catch (updErr) {
+        // non-fatal
+        console.warn("updateProfile failed:", updErr);
+      }
+
+      // Try to save extra user data to Firestore (optional)
+      try {
+        const db = getFirestore();
+        const userDocRef = doc(db, "users", user.uid);
+        await setDoc(userDocRef, {
+          uid: user.uid,
+          firstName: form.firstName.trim(),
+          middleName: form.middleName.trim() || null,
+          lastName: form.lastName.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim(),
+          dob: form.dob,
+          username: form.username?.trim() || null,
+          createdAt: new Date().toISOString(),
+        });
+      } catch (dbErr) {
+        // Firestore might not be enabled — warn but allow signup to succeed
+        console.warn("Could not save user to Firestore (optional):", dbErr);
+      }
+
+      alert(`Account created for ${form.firstName} ${form.lastName} ✓`);
+      // navigate to login (or directly to dashboard if you prefer)
+      navigate("/login");
+    } catch (err) {
+      console.error("Signup error:", err);
+      // friendly messages for common Firebase errors
+      const msg = (err && err.code) ? firebaseErrorMessage(err.code) : (err.message || "Signup failed");
+      alert(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // map some firebase error codes to friendly messages
+  function firebaseErrorMessage(code) {
+    switch (code) {
+      case "auth/email-already-in-use":
+        return "This email is already registered. Try logging in or reset your password.";
+      case "auth/invalid-email":
+        return "Invalid email address.";
+      case "auth/weak-password":
+        return "Weak password — it should be at least 6 characters.";
+      case "auth/network-request-failed":
+        return "Network error. Check your connection and try again.";
+      default:
+        return "Signup failed. " + (code || "");
+    }
+  }
 
   return (
-    <>
-      <style>{`
-        .su-root { min-height:100vh; display:flex; align-items:center; justify-content:center; background: linear-gradient(180deg,#031026,#0b2b5d); padding:20px; font-family:Inter,system-ui,Arial }
-        .su-card { width:100%; max-width:520px; padding:28px; border-radius:14px; background: rgba(255,255,255,0.05); backdrop-filter: blur(8px); color:white; border:1px solid rgba(255,255,255,0.09); box-shadow:0 12px 34px rgba(0,0,0,0.5) }
-        .su-h { margin:0 0 8px 0; font-size:22px; font-weight:700 }
-        .su-sub { margin:0 0 16px 0; color:rgba(255,255,255,0.9) }
-        .su-inp { width:100%; padding:12px 14px; border-radius:10px; border:1px solid rgba(255,255,255,0.12); margin-bottom:12px; background:rgba(255,255,255,0.03); color:white; outline:none }
-        .su-row { display:flex; gap:10px }
-        .su-date-wrapper { display:flex; gap:8px; align-items:center; margin-bottom:12px }
-        .su-date-btn { padding:10px 12px; border-radius:10px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); color:rgba(255,255,255,0.9); cursor:pointer }
-        .su-btn { width:100%; padding:12px 14px; border-radius:999px; border:none; cursor:pointer; background:linear-gradient(90deg,#6fb8ff,#4f9efb); color:#082444; font-weight:800; font-size:16px; box-shadow:0 8px 22px rgba(18,72,121,0.18) }
-        .su-err { background: rgba(255,100,100,0.12); color:#ffdede; padding:8px 10px; border-radius:8px; margin-bottom:10px }
-        .su-note { font-size:13px; color:rgba(255,255,255,0.8); margin-bottom:8px }
-      `}</style>
+    <div className="app-shell">
+      <nav className="top-nav">
+        <div className="brand-logo3" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
+          Learn With <span>Tuseef</span>
+        </div>
+        <div className="menu" style={{ marginLeft: "auto" }}>
+          <a href="#home">Home</a>
+          <a href="#about">About</a>
+          <a href="#services">Services</a>
+        </div>
+      </nav>
 
-      <div className="su-root">
-        <form className="su-card" onSubmit={handleCreate}>
-          <h2 className="su-h">Create Account</h2>
-          <p className="su-sub">Fill your details to create a new account</p>
+      <div className="center-wrapper">
+        <div
+          className="glass-card"
+          style={{ maxWidth: 720, width: "92%", padding: 28 }}
+        >
+          <h2 style={{ fontSize: 30, fontWeight: 800, textAlign: "center" }}>
+            Create your account
+          </h2>
+          <p style={{ textAlign: "center", opacity: 0.9, marginBottom: 18 }}>
+            Join Learn With Tuseef — enter details below to get started
+          </p>
 
-          {error && <div className="su-err">{error}</div>}
+          <form onSubmit={onSubmit} noValidate>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr",
+                gap: 12,
+              }}
+            >
+              <div>
+                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                  First name *
+                </label>
+                <input
+                  className="input"
+                  value={form.firstName}
+                  onChange={(e) => update("firstName", e.target.value)}
+                  placeholder="First name"
+                />
+                {errors.firstName && (
+                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                    {errors.firstName}
+                  </div>
+                )}
+              </div>
 
-          <div className="su-row">
-            <input className="su-inp" placeholder="First name *" value={first} onChange={(e) => setFirst(e.target.value)} />
-            <input className="su-inp" placeholder="Middle name (optional)" value={middle} onChange={(e) => setMiddle(e.target.value)} />
-            <input className="su-inp" placeholder="Last name *" value={last} onChange={(e) => setLast(e.target.value)} />
-          </div>
+              <div>
+                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                  Middle name (optional)
+                </label>
+                <input
+                  className="input"
+                  value={form.middleName}
+                  onChange={(e) => update("middleName", e.target.value)}
+                  placeholder="Middle name (optional)"
+                />
+              </div>
 
-          <input className="su-inp" value={username} readOnly placeholder="Auto-generated username" />
+              <div>
+                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                  Last name *
+                </label>
+                <input
+                  className="input"
+                  value={form.lastName}
+                  onChange={(e) => update("lastName", e.target.value)}
+                  placeholder="Last name"
+                />
+                {errors.lastName && (
+                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                    {errors.lastName}
+                  </div>
+                )}
+              </div>
+            </div>
 
-          <div className="su-date-wrapper">
-            <button type="button" className="su-date-btn" onClick={openDatePicker}>Pick DOB</button>
-            <input className="su-inp" type="date" ref={dobRef} value={dob} onChange={(e) => setDob(e.target.value)} />
-          </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                marginTop: 12,
+              }}
+            >
+              <div>
+                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                  Email *
+                </label>
+                <input
+                  className="input"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => update("email", e.target.value)}
+                  placeholder="you@email.com"
+                />
+                {errors.email && (
+                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                    {errors.email}
+                  </div>
+                )}
+              </div>
 
-          <input className="su-inp" placeholder="Mobile (optional)" value={mobile} onChange={(e) => setMobile(e.target.value)} />
+              <div>
+                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                  Phone *
+                </label>
+                <input
+                  className="input"
+                  type="tel"
+                  value={form.phone}
+                  onChange={(e) => update("phone", e.target.value)}
+                  placeholder="+92 300 1234567"
+                />
+                {errors.phone && (
+                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                    {errors.phone}
+                  </div>
+                )}
+              </div>
+            </div>
 
-          <input className="su-inp" type="password" placeholder="Password (6+ chars)" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                  Date of birth *
+                </label>
+                <input
+                  className="input"
+                  type="date"
+                  value={form.dob}
+                  onChange={(e) => update("dob", e.target.value)}
+                  max={new Date().toISOString().split("T")[0]}
+                />
+                {errors.dob && (
+                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                    {errors.dob}
+                  </div>
+                )}
+              </div>
 
-          <div className="su-note">Username will be <strong>{username || "auto-generated"}</strong></div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                  Username (optional)
+                </label>
+                <input
+                  className="input"
+                  value={form.username}
+                  onChange={(e) => update("username", e.target.value)}
+                  placeholder="Choose a username"
+                />
+              </div>
+            </div>
 
-          <button className="su-btn" type="submit" disabled={loading}>{loading ? "Creating..." : "Create Account"}</button>
-        </form>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                marginTop: 12,
+              }}
+            >
+              <div>
+                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                  Password *
+                </label>
+                <input
+                  className="input"
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => update("password", e.target.value)}
+                  placeholder="Create password"
+                />
+                {errors.password && (
+                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                    {errors.password}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}>
+                  Confirm password *
+                </label>
+                <input
+                  className="input"
+                  type="password"
+                  value={form.confirm}
+                  onChange={(e) => update("confirm", e.target.value)}
+                  placeholder="Repeat password"
+                />
+                {errors.confirm && (
+                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                    {errors.confirm}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginTop: 14,
+              }}
+            >
+              <label className="checkbox" style={{ cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={form.agree}
+                  onChange={(e) => update("agree", e.target.checked)}
+                  style={{ width: 16, height: 16 }}
+                />
+                <span style={{ marginLeft: 8 }}>
+                  I agree to the Terms & Conditions
+                </span>
+              </label>
+            </div>
+            {errors.agree && (
+              <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 8 }}>
+                {errors.agree}
+              </div>
+            )}
+
+            <div
+              style={{
+                marginTop: 18,
+                display: "flex",
+                gap: 12,
+                justifyContent: "flex-end",
+                alignItems: "center",
+              }}
+            >
+              <button
+                type="button"
+                className="ghost-btn"
+                onClick={() => navigate(-1)}
+                disabled={submitting}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="lg-btn" disabled={submitting}>
+                {submitting ? "Creating..." : "Create account"}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
-    </>
+    </div>
   );
 }
-
-export default SignupPage;
