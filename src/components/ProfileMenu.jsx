@@ -1,11 +1,12 @@
 // src/components/ProfileMenu.jsx
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function ProfileMenu({ user, onLogout }) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef();
+  const navigate = useNavigate();
 
-  // Close menu on outside click
   useEffect(() => {
     function handleClick(e) {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -17,12 +18,10 @@ export default function ProfileMenu({ user, onLogout }) {
   }, []);
 
   const userEmail = user?.email || "";
-  const userName =
-    user?.displayName || userEmail.split("@")[0] || "User";
+  const userName = user?.displayName || userEmail.split("@")[0] || "User";
 
   return (
     <div style={{ position: "relative" }} ref={menuRef}>
-      {/* Top Button */}
       <button
         onClick={() => setOpen(!open)}
         style={{
@@ -37,7 +36,6 @@ export default function ProfileMenu({ user, onLogout }) {
         Your Profile ▾
       </button>
 
-      {/* Dropdown Menu */}
       {open && (
         <div
           style={{
@@ -53,21 +51,16 @@ export default function ProfileMenu({ user, onLogout }) {
             zIndex: 999,
           }}
         >
-          {/* Name */}
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#0b2430" }}>
-            {userName}
-          </div>
-
-          {/* Email */}
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
-            {userEmail}
-          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#0b2430" }}>{userName}</div>
+          <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>{userEmail}</div>
 
           <hr style={{ border: "none", borderTop: "1px solid #eee", margin: "8px 0" }} />
 
-          {/* Edit Profile */}
           <button
-            onClick={() => (window.location.href = "/edit-profile")}
+            onClick={() => {
+              setOpen(false);
+              navigate("/profile");
+            }}
             style={{
               display: "flex",
               alignItems: "center",
@@ -82,12 +75,15 @@ export default function ProfileMenu({ user, onLogout }) {
               fontWeight: 600,
             }}
           >
-            ✏️ Edit Profile
+            Your Profile
           </button>
 
-          {/* Logout */}
           <button
-            onClick={onLogout}
+            onClick={() => {
+              setOpen(false);
+              if (typeof onLogout === "function") onLogout();
+              else navigate("/logout");
+            }}
             style={{
               display: "flex",
               alignItems: "center",

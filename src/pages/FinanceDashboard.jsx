@@ -27,6 +27,23 @@ const COLORS = [
   "#795548",
 ];
 
+// Helper: robust date parser (supports Firestore Timestamp or ISO/number/string)
+function toDate(d) {
+  if (!d) return null;
+  try {
+    if (typeof d.toDate === "function") return d.toDate();
+    const maybe = new Date(d);
+    if (!isNaN(maybe)) return maybe;
+  } catch (e) {}
+  return null;
+}
+
+// Helper: ensure amount is a number and use absolute value for aggregations
+function toNumber(n) {
+  const v = Number(n);
+  return isNaN(v) ? 0 : v;
+}
+
 export default function FinanceDashboard({ user, onLogout }) {
   const userId = user?.uid;
   const [transactions, setTransactions] = useState([]);
@@ -44,28 +61,36 @@ export default function FinanceDashboard({ user, onLogout }) {
     return () => unsub();
   }, [userId]);
 
-  // KPI calculations
+  // KPI calculations (current month)
   const now = new Date();
   const monthKey = (d) => `${d.getFullYear()}-${d.getMonth() + 1}`;
   const currentMonthKey = monthKey(now);
 
   let monthlyIncome = 0,
     monthlyExpense = 0;
+
   transactions.forEach((t) => {
-    const tMonth = monthKey(new Date(t.date));
-    if (tMonth === currentMonthKey) {
-      if (t.type === "income") monthlyIncome += t.amount;
-      else monthlyExpense += t.amount;
-    }
+    const dateObj = toDate(t.date);
+    if (!dateObj) return;
+    const tMonth = monthKey(dateObj);
+    if (tMonth !== currentMonthKey) return;
+
+    const amt = toNumber(t.amount);
+    // Use absolute values because some items may be stored negative/positive inconsistently
+    if (t.type === "income") monthlyIncome += Math.abs(amt);
+    else monthlyExpense += Math.abs(amt);
   });
+
   const net = monthlyIncome - monthlyExpense;
 
   // Pie chart data (expenses by category)
   const byCategory = {};
   transactions.forEach((t) => {
+    if (t.type !== "expense") return;
+    const amt = Math.abs(toNumber(t.amount));
     const cat = t.category || "Other";
     if (!byCategory[cat]) byCategory[cat] = 0;
-    if (t.type === "expense") byCategory[cat] += t.amount;
+    byCategory[cat] += amt;
   });
   const pieData = Object.keys(byCategory).map((k) => ({
     name: k,
@@ -83,32 +108,33 @@ export default function FinanceDashboard({ user, onLogout }) {
       monthIdx: d.getMonth(),
     });
   }
+
   const trendData = months.map((m) => {
     const monthKeyStr = `${m.year}-${m.monthIdx + 1}`;
     let inc = 0,
       exp = 0;
     transactions.forEach((t) => {
-      const tMonth = `${new Date(t.date).getFullYear()}-${
-        new Date(t.date).getMonth() + 1
-      }`;
-      if (tMonth === monthKeyStr) {
-        if (t.type === "income") inc += t.amount;
-        else exp += t.amount;
-      }
+      const dateObj = toDate(t.date);
+      if (!dateObj) return;
+      const tMonth = `${dateObj.getFullYear()}-${dateObj.getMonth() + 1}`;
+      if (tMonth !== monthKeyStr) return;
+      const amt = Math.abs(toNumber(t.amount));
+      if (t.type === "income") inc += amt;
+      else exp += amt;
     });
     return { name: m.label, Income: inc, Expense: exp };
   });
 
-  // Styles: white cards for clarity
+  // Styles: white cards for clarity — set text color explicitly to black
   const cardStyle = {
     background: "#ffffff",
-    color: "#0b2430",
+    color: "#000",
     padding: 18,
     borderRadius: 10,
     boxShadow: "0 6px 20px rgba(3,10,18,0.25)",
   };
 
-  const kpiVal = { fontSize: 22, fontWeight: 800 };
+  const kpiVal = { fontSize: 22, fontWeight: 800, color: "#000" };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -126,12 +152,12 @@ export default function FinanceDashboard({ user, onLogout }) {
             marginBottom: 18,
           }}
         >
-          {/* BACK BUTTON (added) */}
           <BackButton label="←" />
 
           <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>
             Dashboard
           </div>
+
           <div
             style={{
               marginLeft: "auto",
@@ -140,13 +166,12 @@ export default function FinanceDashboard({ user, onLogout }) {
               gap: 12,
             }}
           >
-            <div style={{ color: "#fff", opacity: 0.9 }}>
+            <div style={{ color: "#0f0e0eff", opacity: 0.9 }}>
               Hi,{" "}
-              <strong style={{ color: "#fff" }}>
+              <strong style={{ color: "#0b0b0bff" }}>
                 {user?.displayName || (user?.email || "").split("@")[0]}
               </strong>
             </div>
-            {/* ProfileMenu uses same glass style as before; pass user and onLogout */}
             <ProfileMenu user={user} onLogout={onLogout} />
           </div>
         </div>
@@ -161,17 +186,17 @@ export default function FinanceDashboard({ user, onLogout }) {
           }}
         >
           <div style={cardStyle}>
-            <div style={{ opacity: 0.7 }}>Monthly Income</div>
+            <div style={{ opacity: 0.7, color: "#000" }}>Monthly Income</div>
             <div style={kpiVal}>{monthlyIncome}</div>
           </div>
 
           <div style={cardStyle}>
-            <div style={{ opacity: 0.7 }}>Monthly Expenses</div>
+            <div style={{ opacity: 0.7, color: "#000" }}>Monthly Expenses</div>
             <div style={{ ...kpiVal, color: "#e53935" }}>{monthlyExpense}</div>
           </div>
 
           <div style={cardStyle}>
-            <div style={{ opacity: 0.7 }}>Net Savings</div>
+            <div style={{ opacity: 0.7, color: "#000" }}>Net Savings</div>
             <div style={kpiVal}>{net}</div>
           </div>
         </div>
@@ -182,7 +207,7 @@ export default function FinanceDashboard({ user, onLogout }) {
         >
           {/* Pie chart container — white card */}
           <div style={cardStyle}>
-            <h4 style={{ marginTop: 0 }}>Spending Breakdown</h4>
+            <h4 style={{ marginTop: 0, color: "#000" }}>Spending Breakdown</h4>
             {pieData.length === 0 ? (
               <div style={{ color: "#666" }}>No expense data yet.</div>
             ) : (
@@ -211,7 +236,9 @@ export default function FinanceDashboard({ user, onLogout }) {
 
           {/* Bar chart container — white card */}
           <div style={cardStyle}>
-            <h4 style={{ marginTop: 0 }}>6-Month Income vs Expense</h4>
+            <h4 style={{ marginTop: 0, color: "#000" }}>
+              6-Month Income vs Expense
+            </h4>
             <div style={{ width: "100%", height: 300 }}>
               <ResponsiveContainer>
                 <BarChart data={trendData}>
@@ -237,50 +264,57 @@ export default function FinanceDashboard({ user, onLogout }) {
           }}
         >
           <div style={cardStyle}>
-            <h4 style={{ marginTop: 0 }}>Recent Transactions</h4>
+            <h4 style={{ marginTop: 0, color: "#000" }}>Recent Transactions</h4>
             {transactions.length === 0 ? (
               <div style={{ color: "#666" }}>
                 No transactions. Add some from the Transactions page.
               </div>
             ) : (
               <div style={{ display: "grid", gap: 8 }}>
-                {transactions.slice(0, 6).map((tx) => (
-                  <div
-                    key={tx.id}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: 8,
-                      borderRadius: 8,
-                      background: "#f7fafc",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontWeight: 700 }}>{tx.category}</div>
-                      <div style={{ fontSize: 12, color: "#555" }}>
-                        {new Date(tx.date).toLocaleDateString()}
-                      </div>
-                    </div>
+                {transactions.slice(0, 6).map((tx) => {
+                  const dateObj = toDate(tx.date);
+                  const dateText = dateObj
+                    ? dateObj.toLocaleDateString()
+                    : "Invalid Date";
+                  const amt = Math.abs(toNumber(tx.amount));
+                  return (
                     <div
+                      key={tx.id}
                       style={{
-                        textAlign: "right",
-                        color: tx.type === "income" ? "#0b8a4e" : "#d32f2f",
-                        fontWeight: 800,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: 8,
+                        borderRadius: 8,
+                        background: "#f7fafc",
                       }}
                     >
-                      {tx.type === "income"
-                        ? `+ ${tx.amount}`
-                        : `- ${tx.amount}`}
+                      <div>
+                        <div style={{ fontWeight: 700, color: "#000" }}>
+                          {tx.category}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#555" }}>
+                          {dateText}
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          textAlign: "right",
+                          color: tx.type === "income" ? "#0b8a4e" : "#d32f2f",
+                          fontWeight: 800,
+                        }}
+                      >
+                        {tx.type === "income" ? `+ ${amt}` : `- ${amt}`}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
 
           <div style={cardStyle}>
-            <h4 style={{ marginTop: 0 }}>Quick Actions</h4>
+            <h4 style={{ marginTop: 0, color: "#000" }}>Quick Actions</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <button
                 onClick={() => (window.location.href = "/transactions")}
