@@ -6,14 +6,15 @@ import StartPage from "./pages/StartPage";
 import ChooseAuth from "./pages/ChooseAuth";
 import LoginFormPage from "./pages/LoginFormPage";
 import SignupPage from "./pages/SignupPage";
-import MainDashboard from "./pages/MainDashboard";
-import EditProfile from "./pages/EditProfile"; // <-- new page
+// use FinanceDashboard (you created this)
+import FinanceDashboard from "./pages/FinanceDashboard";
+import EditProfile from "./pages/EditProfile";
+import TransactionsPage from "./pages/TransactionsPage";
 
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./firebase";
 
 function ProtectedRoute({ children, user, loading }) {
-  // while checking auth, you can show spinner; for now return null
   if (loading) return null;
   return user ? children : <Navigate to="/login" replace />;
 }
@@ -30,14 +31,11 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // logout function to pass down
   async function handleLogout() {
     try {
       await signOut(auth);
-      // optionally: setUser(null) will be handled by onAuthStateChanged
     } catch (err) {
-      console.error("Logout error:", err);
-      // show notification to user if needed
+      console.error("Logout failed:", err);
     }
   }
 
@@ -48,20 +46,29 @@ export default function App() {
       <Route path="/login" element={<LoginFormPage />} />
       <Route path="/signup" element={<SignupPage />} />
 
-      {/* protected dashboard */}
+      {/* Finance dashboard */}
       <Route
         path="/dashboard"
         element={
           <ProtectedRoute user={user} loading={checkingAuth}>
-            {/* pass user & logout to dashboard so it can render profile menu */}
-            <MainDashboard user={user} onLogout={handleLogout} />
+            <FinanceDashboard user={user} onLogout={handleLogout} />
           </ProtectedRoute>
         }
       />
 
-      {/* protected edit-profile page */}
+      {/* Transactions */}
       <Route
-        path="/edit-profile"
+        path="/transactions"
+        element={
+          <ProtectedRoute user={user} loading={checkingAuth}>
+            <TransactionsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Settings / Edit profile */}
+      <Route
+        path="/settings"
         element={
           <ProtectedRoute user={user} loading={checkingAuth}>
             <EditProfile />
