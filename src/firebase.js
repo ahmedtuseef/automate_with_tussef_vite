@@ -1,12 +1,9 @@
 // src/firebase.js
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
-/**
- * Replace values only if they are different in your Firebase console.
- * I used the config you shared earlier — leave as-is if identical.
- */
+// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyASMeQtIYv3gQmrq9RQrz5mkbLFm7FcZj0",
   authDomain: "learn-with-tuseef.firebaseapp.com",
@@ -14,15 +11,14 @@ const firebaseConfig = {
   storageBucket: "learn-with-tuseef.appspot.com",
   messagingSenderId: "402478684872",
   appId: "1:402478684872:web:0ce91735b15f0ac36863fd",
-  measurementId: "G-4LYM97R88C"
+  measurementId: "G-4LYM97R88C",
 };
 
-// initialize once
-const app = initializeApp(firebaseConfig);
+// Prevent re-initialization during hot reload (Vite + React)
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
 
-// debug - open browser console to see this
-console.log("[firebase] app initialized, projectId:", app.options?.projectId);
-
-// exports
+// Firebase Services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+
+export default app;
