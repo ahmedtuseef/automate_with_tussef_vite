@@ -12,14 +12,32 @@ import TransactionsPage from "./pages/TransactionsPage";
 import SettingsPage from "./pages/settingPage";
 import YourProfile from "./pages/YourProfile";
 
+// NEW PAGES
+import ReportsPage from "./pages/ReportsPage";
+import RecurringTransactionsPage from "./pages/RecurringTransactionsPage";
+
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./firebase";
 
 function ProtectedRoute({ children, user, loading }) {
   if (loading) {
     return (
-      <div style={{ minHeight: "60vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ padding: 12, borderRadius: 8, background: "rgba(255,255,255,0.9)", boxShadow: "0 8px 30px rgba(2,6,23,0.06)" }}>
+      <div
+        style={{
+          minHeight: "60vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          style={{
+            padding: 12,
+            borderRadius: 8,
+            background: "rgba(255,255,255,0.9)",
+            boxShadow: "0 8px 30px rgba(2,6,23,0.06)",
+          }}
+        >
           Loading…
         </div>
       </div>
@@ -50,11 +68,12 @@ export default function App() {
 
   async function handleSaveProfile(updatedProfile) {
     console.log("Profile saved (mock):", updatedProfile);
-    // TODO: wire to Firestore / auth update if you want persistence
+    // yahan chaaho toh auth / Firestore update wire kar sakte ho
   }
 
   return (
     <Routes>
+      {/* Public routes */}
       <Route path="/" element={<StartPage />} />
 
       {/* legacy /choose route -> redirect to login (safe) */}
@@ -63,7 +82,7 @@ export default function App() {
       <Route path="/login" element={<LoginFormPage />} />
       <Route path="/signup" element={<SignupPage />} />
 
-      {/* Finance dashboard */}
+      {/* Dashboard */}
       <Route
         path="/dashboard"
         element={
@@ -83,32 +102,56 @@ export default function App() {
         }
       />
 
-      {/* Settings page (uses src/pages/settingPage.jsx) */}
+      {/* Settings */}
       <Route
         path="/settings"
         element={
           <ProtectedRoute user={user} loading={checkingAuth}>
-            <SettingsPage user={user} />
+            <SettingsPage user={user} onSaveProfile={handleSaveProfile} />
           </ProtectedRoute>
         }
       />
 
-      {/* Your Profile page */}
+      {/* Your Profile */}
       <Route
         path="/profile"
         element={
           <ProtectedRoute user={user} loading={checkingAuth}>
-            <YourProfile user={user} onSave={handleSaveProfile} onLogout={handleLogout} />
+            <YourProfile
+              user={user}
+              onSave={handleSaveProfile}
+              onLogout={handleLogout}
+            />
           </ProtectedRoute>
         }
       />
 
-      {/* Edit Profile route re-uses SettingsPage (since your edit code is in settingPage.jsx) */}
+      {/* Edit Profile (re-uses SettingsPage) */}
       <Route
         path="/edit-profile"
         element={
           <ProtectedRoute user={user} loading={checkingAuth}>
-            <SettingsPage user={user} />
+            <SettingsPage user={user} onSaveProfile={handleSaveProfile} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* NEW: Reports page */}
+      <Route
+        path="/reports"
+        element={
+          <ProtectedRoute user={user} loading={checkingAuth}>
+            <ReportsPage user={user} onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* NEW: Recurring Transactions page */}
+      <Route
+        path="/recurring"
+        element={
+          <ProtectedRoute user={user} loading={checkingAuth}>
+            <RecurringTransactionsPage user={user} onLogout={handleLogout} />
           </ProtectedRoute>
         }
       />

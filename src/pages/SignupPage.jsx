@@ -77,11 +77,10 @@ export default function SignupPage() {
         const displayName = `${form.firstName.trim()} ${form.lastName.trim()}`;
         await updateProfile(user, { displayName });
       } catch (updErr) {
-        // non-fatal
         console.warn("updateProfile failed:", updErr);
       }
 
-      // Try to save extra user data to Firestore (optional)
+      // save extra user data to Firestore (optional)
       try {
         const db = getFirestore();
         const userDocRef = doc(db, "users", user.uid);
@@ -97,16 +96,13 @@ export default function SignupPage() {
           createdAt: new Date().toISOString(),
         });
       } catch (dbErr) {
-        // Firestore might not be enabled — warn but allow signup to succeed
         console.warn("Could not save user to Firestore (optional):", dbErr);
       }
 
       alert(`Account created for ${form.firstName} ${form.lastName} ✓`);
-      // navigate to login (or directly to dashboard if you prefer)
       navigate("/login");
     } catch (err) {
       console.error("Signup error:", err);
-      // friendly messages for common Firebase errors
       const msg =
         err && err.code
           ? firebaseErrorMessage(err.code)
@@ -117,7 +113,6 @@ export default function SignupPage() {
     }
   }
 
-  // map some firebase error codes to friendly messages
   function firebaseErrorMessage(code) {
     switch (code) {
       case "auth/email-already-in-use":
@@ -134,7 +129,16 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      style={{
+        minHeight: "100vh",
+        background: "url('/background.jpg') center/cover no-repeat",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      {/* TOP NAV */}
       <nav
         className="top-nav"
         style={{
@@ -142,16 +146,16 @@ export default function SignupPage() {
           alignItems: "center",
           gap: 12,
           padding: "14px 28px",
-          backdropFilter: "blur(6px)",
+          backdropFilter: "blur(10px)",
           background:
-            "linear-gradient(180deg, rgba(2,6,23,0.55), rgba(2,6,23,0.25))",
+            "linear-gradient(180deg, rgba(15,23,42,0.9), rgba(15,23,42,0.55))",
+          borderBottom: "1px solid rgba(148,163,184,0.35)",
         }}
       >
-        {/* Back arrow placed inside nav (left of logo) */}
         <div style={{ display: "flex", alignItems: "center" }}>
           <BackButton
             label="←"
-            styleOverride={{ fontSize: 18, fontWeight: 800, color: "#fff" }}
+            styleOverride={{ fontSize: 18, fontWeight: 800, color: "#e5f2ff" }}
           />
         </div>
 
@@ -162,32 +166,115 @@ export default function SignupPage() {
             fontSize: 20,
             letterSpacing: 0.4,
             marginLeft: 6,
-            color: "#f8fafc",
+            color: "#f9fafb",
           }}
         >
-          Balance <span style={{ color: "#cfeefc" }}>board</span>
+          Balance <span style={{ color: "#bae6fd" }}>board</span>
         </div>
 
-        <div className="menu" style={{ marginLeft: "auto" }}>
-          <a href="#home">Home</a>
-          <a href="#about">About</a>
-          <a href="#services">Services</a>
+        <div
+          className="menu"
+          style={{
+            marginLeft: "auto",
+            display: "flex",
+            gap: 20,
+            fontSize: 14,
+          }}
+        >
+          {["Home", "About", "Services"].map((item) => (
+            <a
+              key={item}
+              href={`#${item.toLowerCase()}`}
+              style={{
+                color: "#e2e8f0",
+                textDecoration: "none",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = "#ffffff";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = "#e2e8f0";
+              }}
+            >
+              {item}
+            </a>
+          ))}
         </div>
       </nav>
 
-      <div className="center-wrapper">
+      {/* CENTER CARD */}
+      <div
+        className="center-wrapper"
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "40px 16px",
+        }}
+      >
         <div
           className="glass-card"
-          style={{ maxWidth: 720, width: "92%", padding: 28 }}
+          style={{
+            maxWidth: 760,
+            width: "96%",
+            padding: 28,
+            borderRadius: 18,
+            background:
+              "linear-gradient(140deg, rgba(15,23,42,0.96), rgba(30,64,175,0.9))",
+            boxShadow: "0 26px 70px rgba(15,23,42,0.8)",
+            border: "1px solid rgba(148,163,184,0.6)",
+            color: "#f9fafb",
+          }}
         >
-          <h2 style={{ fontSize: 30, fontWeight: 800, textAlign: "center" }}>
+          {/* small badge + title */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              marginBottom: 4,
+            }}
+          >
+            <div
+              style={{
+                padding: "3px 10px",
+                borderRadius: 999,
+                background: "rgba(34,197,94,0.18)",
+                color: "#bbf7d0",
+                fontSize: 11,
+                fontWeight: 600,
+                textTransform: "uppercase",
+                letterSpacing: 0.06,
+              }}
+            >
+              Step 1 • Create your free account
+            </div>
+          </div>
+
+          <h2
+            style={{
+              fontSize: 30,
+              fontWeight: 800,
+              textAlign: "center",
+              marginTop: 10,
+              marginBottom: 4,
+            }}
+          >
             Create your account
           </h2>
-          <p style={{ textAlign: "center", opacity: 0.9, marginBottom: 18 }}>
-            Join Learn With Tuseef — enter details below to get started
+          <p
+            style={{
+              textAlign: "center",
+              opacity: 0.9,
+              marginBottom: 20,
+              fontSize: 14,
+            }}
+          >
+            Join with <strong>Tuseef’s Balance board</strong> and manage income,
+            expenses and budgets in one place.
           </p>
-
           <form onSubmit={onSubmit} noValidate>
+            {/* NAME ROW */}
             <div
               style={{
                 display: "grid",
@@ -196,9 +283,7 @@ export default function SignupPage() {
               }}
             >
               <div>
-                <label
-                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
-                >
+                <label style={{ fontSize: 13, color: "#cbd5f5" }}>
                   First name *
                 </label>
                 <input
@@ -208,16 +293,14 @@ export default function SignupPage() {
                   placeholder="First name"
                 />
                 {errors.firstName && (
-                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                  <div style={{ color: "#fecaca", fontSize: 12, marginTop: 4 }}>
                     {errors.firstName}
                   </div>
                 )}
               </div>
 
               <div>
-                <label
-                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
-                >
+                <label style={{ fontSize: 13, color: "#cbd5f5" }}>
                   Middle name (optional)
                 </label>
                 <input
@@ -229,9 +312,7 @@ export default function SignupPage() {
               </div>
 
               <div>
-                <label
-                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
-                >
+                <label style={{ fontSize: 13, color: "#cbd5f5" }}>
                   Last name *
                 </label>
                 <input
@@ -241,13 +322,14 @@ export default function SignupPage() {
                   placeholder="Last name"
                 />
                 {errors.lastName && (
-                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                  <div style={{ color: "#fecaca", fontSize: 12, marginTop: 4 }}>
                     {errors.lastName}
                   </div>
                 )}
               </div>
             </div>
 
+            {/* EMAIL / PHONE */}
             <div
               style={{
                 display: "grid",
@@ -257,9 +339,7 @@ export default function SignupPage() {
               }}
             >
               <div>
-                <label
-                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
-                >
+                <label style={{ fontSize: 13, color: "#cbd5f5" }}>
                   Email *
                 </label>
                 <input
@@ -270,16 +350,14 @@ export default function SignupPage() {
                   placeholder="you@email.com"
                 />
                 {errors.email && (
-                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                  <div style={{ color: "#fecaca", fontSize: 12, marginTop: 4 }}>
                     {errors.email}
                   </div>
                 )}
               </div>
 
               <div>
-                <label
-                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
-                >
+                <label style={{ fontSize: 13, color: "#cbd5f5" }}>
                   Phone *
                 </label>
                 <input
@@ -290,18 +368,17 @@ export default function SignupPage() {
                   placeholder="+92 300 1234567"
                 />
                 {errors.phone && (
-                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                  <div style={{ color: "#fecaca", fontSize: 12, marginTop: 4 }}>
                     {errors.phone}
                   </div>
                 )}
               </div>
             </div>
 
+            {/* DOB / USERNAME */}
             <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
               <div style={{ flex: 1 }}>
-                <label
-                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
-                >
+                <label style={{ fontSize: 13, color: "#cbd5f5" }}>
                   Date of birth *
                 </label>
                 <input
@@ -312,16 +389,14 @@ export default function SignupPage() {
                   max={new Date().toISOString().split("T")[0]}
                 />
                 {errors.dob && (
-                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                  <div style={{ color: "#fecaca", fontSize: 12, marginTop: 4 }}>
                     {errors.dob}
                   </div>
                 )}
               </div>
 
               <div style={{ flex: 1 }}>
-                <label
-                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
-                >
+                <label style={{ fontSize: 13, color: "#cbd5f5" }}>
                   Username (optional)
                 </label>
                 <input
@@ -333,6 +408,7 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* PASSWORDS */}
             <div
               style={{
                 display: "grid",
@@ -342,9 +418,7 @@ export default function SignupPage() {
               }}
             >
               <div>
-                <label
-                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
-                >
+                <label style={{ fontSize: 13, color: "#cbd5f5" }}>
                   Password *
                 </label>
                 <input
@@ -355,16 +429,26 @@ export default function SignupPage() {
                   placeholder="Create password"
                 />
                 {errors.password && (
-                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                  <div style={{ color: "#fecaca", fontSize: 12, marginTop: 4 }}>
                     {errors.password}
+                  </div>
+                )}
+                {!errors.password && form.password && (
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "#a5b4fc",
+                      marginTop: 4,
+                    }}
+                  >
+                    Tip: Use at least 1 number & 1 symbol for a stronger
+                    password.
                   </div>
                 )}
               </div>
 
               <div>
-                <label
-                  style={{ fontSize: 13, color: "rgba(255,255,255,0.85)" }}
-                >
+                <label style={{ fontSize: 13, color: "#cbd5f5" }}>
                   Confirm password *
                 </label>
                 <input
@@ -375,13 +459,14 @@ export default function SignupPage() {
                   placeholder="Repeat password"
                 />
                 {errors.confirm && (
-                  <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 6 }}>
+                  <div style={{ color: "#fecaca", fontSize: 12, marginTop: 4 }}>
                     {errors.confirm}
                   </div>
                 )}
               </div>
             </div>
 
+            {/* TERMS */}
             <div
               style={{
                 display: "flex",
@@ -390,7 +475,10 @@ export default function SignupPage() {
                 marginTop: 14,
               }}
             >
-              <label className="checkbox" style={{ cursor: "pointer" }}>
+              <label
+                className="checkbox"
+                style={{ cursor: "pointer", fontSize: 13, color: "#e5e7eb" }}
+              >
                 <input
                   type="checkbox"
                   checked={form.agree}
@@ -398,36 +486,68 @@ export default function SignupPage() {
                   style={{ width: 16, height: 16 }}
                 />
                 <span style={{ marginLeft: 8 }}>
-                  I agree to the Terms & Conditions
+                  I agree to the{" "}
+                  <span style={{ textDecoration: "underline" }}>
+                    Terms & Conditions
+                  </span>
                 </span>
               </label>
             </div>
             {errors.agree && (
-              <div style={{ color: "#ffd1d1", fontSize: 13, marginTop: 8 }}>
+              <div style={{ color: "#fecaca", fontSize: 12, marginTop: 4 }}>
                 {errors.agree}
               </div>
             )}
 
+            {/* ACTIONS */}
             <div
               style={{
-                marginTop: 18,
+                marginTop: 20,
                 display: "flex",
                 gap: 12,
-                justifyContent: "flex-end",
+                justifyContent: "space-between",
                 alignItems: "center",
+                flexWrap: "wrap",
               }}
             >
-              <button
-                type="button"
-                className="ghost-btn"
-                onClick={() => navigate(-1)}
-                disabled={submitting}
+              <div style={{ fontSize: 12, color: "#cbd5f5" }}>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => navigate("/login")}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#38bdf8",
+                    cursor: "pointer",
+                    padding: 0,
+                    textDecoration: "underline",
+                    fontSize: 12,
+                  }}
+                >
+                  Log in
+                </button>
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: 10,
+                  justifyContent: "flex-end",
+                }}
               >
-                Cancel
-              </button>
-              <button type="submit" className="lg-btn" disabled={submitting}>
-                {submitting ? "Creating..." : "Create account"}
-              </button>
+                <button
+                  type="button"
+                  className="ghost-btn"
+                  onClick={() => navigate(-1)}
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="lg-btn" disabled={submitting}>
+                  {submitting ? "Creating..." : "Create account"}
+                </button>
+              </div>
             </div>
           </form>
         </div>
