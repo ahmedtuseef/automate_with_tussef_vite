@@ -1,6 +1,6 @@
 // src/pages/FinanceDashboard.jsx
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom"; // ✅ NEW
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import ProfileMenu from "../components/ProfileMenu";
 import BackButton from "../components/BackButton";
@@ -58,13 +58,6 @@ const DASHBOARD_STYLES = `
     gap: 16px;
   }
 
-  .dashboard-grid-bottom {
-    margin-top: 18px;
-    display: grid;
-    grid-template-columns: minmax(0, 1.7fr) 300px;
-    gap: 16px;
-  }
-
   .budget-overview-layout {
     display: grid;
     grid-template-columns: minmax(0, 1.7fr) minmax(0, 1.1fr);
@@ -78,6 +71,18 @@ const DASHBOARD_STYLES = `
     gap: 12px;
   }
 
+  /* Quick actions layout */
+  .quick-actions-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .quick-actions-container button {
+    flex: 1 1 180px;
+  }
+
   @media (max-width: 900px) {
     .dashboard-grid-3 {
       grid-template-columns: minmax(0, 1fr);
@@ -85,11 +90,19 @@ const DASHBOARD_STYLES = `
     .dashboard-grid-2 {
       grid-template-columns: minmax(0, 1fr);
     }
-    .dashboard-grid-bottom {
-      grid-template-columns: minmax(0, 1fr);
-    }
     .budget-overview-layout {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* Mobile quick actions -> horizontal slider */
+    .quick-actions-container {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .quick-actions-container button {
+      flex: 0 0 190px;
+      white-space: nowrap;
     }
   }
 `;
@@ -203,7 +216,7 @@ function buildMonthlyExpenseCalendar(transactions, now) {
 
 export default function FinanceDashboard({ user, onLogout }) {
   const userId = user?.uid;
-  const navigate = useNavigate(); // ✅ NEW
+  const navigate = useNavigate();
 
   const [transactions, setTransactions] = useState([]);
   const [budgets, setBudgets] = useState([]);
@@ -570,6 +583,115 @@ export default function FinanceDashboard({ user, onLogout }) {
           </div>
         </div>
 
+        {/* ✅ Quick Actions – moved to top */}
+        <div style={{ ...cardStyle, marginBottom: 16 }}>
+          <h4 style={{ marginTop: 0, color: "#000" }}>Quick Actions</h4>
+          <div className="quick-actions-container">
+            <button
+              type="button"
+              onClick={() => navigate("/transactions")}
+              style={{
+                padding: 10,
+                borderRadius: 8,
+                border: "none",
+                background: "#0b7b5b",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              ➕ Add Transaction
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/budgets")}
+              style={{
+                padding: 10,
+                borderRadius: 8,
+                border: "none",
+                background: "#16a34a",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              🎯 Manage Budgets
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/goals")}
+              style={{
+                padding: 10,
+                borderRadius: 8,
+                border: "none",
+                background: "#f97316",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              💰 Goal Setting
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/reports")}
+              style={{
+                padding: 10,
+                borderRadius: 8,
+                border: "none",
+                background: "#2563eb",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              📊 View Reports
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate("/recurring")}
+              style={{
+                padding: 10,
+                borderRadius: 8,
+                border: "none",
+                background: "#7c3aed",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              🔁 Manage Recurring Transactions
+            </button>
+
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              style={{
+                padding: 10,
+                borderRadius: 8,
+                border: "1px solid #ddd",
+                background: "#fff",
+                color: "#222",
+                cursor: "pointer",
+              }}
+            >
+              ⤓ Export CSV
+            </button>
+          </div>
+
+          {exportMessage && (
+            <div
+              style={{
+                fontSize: 12,
+                color: "#16a34a",
+                marginTop: 4,
+                fontWeight: 600,
+              }}
+            >
+              {exportMessage}
+            </div>
+          )}
+        </div>
+
         {/* Budget Overview */}
         <div style={{ ...cardStyle, marginBottom: 16 }}>
           <h4 style={{ marginTop: 0, color: "#000" }}>
@@ -583,7 +705,7 @@ export default function FinanceDashboard({ user, onLogout }) {
               No budgets set yet. Configure category-wise limits from the
               <button
                 type="button"
-                onClick={() => navigate("/budgets")} // ✅ UPDATED
+                onClick={() => navigate("/budgets")}
                 style={{
                   marginLeft: 4,
                   padding: "4px 8px",
@@ -693,7 +815,7 @@ export default function FinanceDashboard({ user, onLogout }) {
             <h4 style={{ margin: 0, color: "#000" }}>Goals Progress</h4>
             <button
               type="button"
-              onClick={() => navigate("/goals")} // ✅ UPDATED
+              onClick={() => navigate("/goals")}
               style={{
                 marginLeft: "auto",
                 padding: "4px 10px",
@@ -799,7 +921,7 @@ export default function FinanceDashboard({ user, onLogout }) {
           )}
         </div>
 
-        {/* 📅 NEW: Monthly Expense Calendar */}
+        {/* 📅 Monthly Expense Calendar */}
         <div style={{ ...cardStyle, marginBottom: 16 }}>
           <h4 style={{ marginTop: 0, color: "#000" }}>
             Monthly Expense Calendar (Current Month)
@@ -869,7 +991,7 @@ export default function FinanceDashboard({ user, onLogout }) {
                   if (total > 0 && calendarData.maxExpense > 0) {
                     const ratio = total / calendarData.maxExpense;
                     const alpha = 0.18 + 0.55 * Math.min(1, ratio);
-                    bg = `rgba(248, 113, 113, ${alpha.toFixed(2)})`; // red-400 with variable alpha
+                    bg = `rgba(248, 113, 113, ${alpha.toFixed(2)})`;
                     border = "rgba(248,113,113,0.7)";
                     amountColor = "#111827";
                   }
@@ -991,8 +1113,8 @@ export default function FinanceDashboard({ user, onLogout }) {
           </div>
         </div>
 
-        {/* Recent + Quick actions */}
-        <div className="dashboard-grid-bottom">
+        {/* Recent Transactions - bottom full width */}
+        <div style={{ marginTop: 18 }}>
           <div style={cardStyle}>
             <h4 style={{ marginTop: 0, color: "#000" }}>Recent Transactions</h4>
             {isLoadingTx ? (
@@ -1055,120 +1177,6 @@ export default function FinanceDashboard({ user, onLogout }) {
                   })}
               </div>
             )}
-          </div>
-
-          <div style={cardStyle}>
-            <h4 style={{ marginTop: 0, color: "#000" }}>Quick Actions</h4>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: 10,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => navigate("/transactions")} // ✅ UPDATED
-                style={{
-                  padding: 10,
-                  borderRadius: 8,
-                  border: "none",
-                  background: "#0b7b5b",
-                  color: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                ➕ Add Transaction
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/budgets")} // ✅ UPDATED
-                style={{
-                  padding: 10,
-                  borderRadius: 8,
-                  border: "none",
-                  background: "#16a34a",
-                  color: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                🎯 Manage Budgets
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/goals")} // ✅ UPDATED
-                style={{
-                  padding: 10,
-                  borderRadius: 8,
-                  border: "none",
-                  background: "#f97316",
-                  color: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                💰 Goal Setting
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/reports")} // ✅ UPDATED
-                style={{
-                  padding: 10,
-                  borderRadius: 8,
-                  border: "none",
-                  background: "#2563eb",
-                  color: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                📊 View Reports
-              </button>
-
-              <button
-                type="button"
-                onClick={() => navigate("/recurring")} // ✅ UPDATED
-                style={{
-                  padding: 10,
-                  borderRadius: 8,
-                  border: "none",
-                  background: "#7c3aed",
-                  color: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                🔁 Manage Recurring Transactions
-              </button>
-
-              <button
-                type="button"
-                onClick={handleExportCsv}
-                style={{
-                  padding: 10,
-                  borderRadius: 8,
-                  border: "1px solid #ddd",
-                  background: "#fff",
-                  color: "#222",
-                  cursor: "pointer",
-                }}
-              >
-                ⤓ Export CSV
-              </button>
-
-              {exportMessage && (
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "#16a34a",
-                    marginTop: 4,
-                    fontWeight: 600,
-                  }}
-                >
-                  {exportMessage}
-                </div>
-              )}
-            </div>
           </div>
         </div>
       </div>
