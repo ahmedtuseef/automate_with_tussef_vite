@@ -29,9 +29,6 @@ const COLORS = [
 
 /**
  * GLOBAL DASHBOARD CSS
- * - skeleton shimmer
- * - responsive grid layouts
- * - budget overview layout (list + chart)
  */
 const DASHBOARD_STYLES = `
   @keyframes dashboard-pulse {
@@ -74,6 +71,58 @@ const DASHBOARD_STYLES = `
     align-items: stretch;
   }
 
+  .goals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+  }
+
+  /* LOADING OVERLAY + SPINNER */
+  @keyframes dashboard-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .dashboard-loading-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(circle at top, rgba(15,23,42,0.38), rgba(15,23,42,0.8));
+    z-index: 20;
+  }
+
+  .dashboard-loading-inner {
+    background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,64,175,0.9));
+    padding: 20px 28px;
+    border-radius: 18px;
+    border: 1px solid rgba(148,163,184,0.6);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    min-width: 260px;
+  }
+
+  .dashboard-spinner {
+    width: 48px;
+    height: 48px;
+    border-radius: 999px;
+    border: 3px solid rgba(148,163,184,0.45);
+    border-top-color: #0ea5e9;
+    border-right-color: #22c55e;
+    animation: dashboard-spin 0.8s linear infinite;
+    box-shadow: 0 0 0 3px rgba(15,23,42,0.55);
+  }
+
+  .dashboard-loading-text {
+    font-size: 14px;
+    color: #e5f2ff;
+    text-align: center;
+  }
+
   @media (max-width: 900px) {
     .dashboard-grid-3 {
       grid-template-columns: minmax(0, 1fr);
@@ -90,7 +139,7 @@ const DASHBOARD_STYLES = `
   }
 `;
 
-// Helper: robust date parser (supports Firestore Timestamp or ISO/number/string)
+// Helper: robust date parser
 function toDate(d) {
   if (!d) return null;
   try {
@@ -101,13 +150,11 @@ function toDate(d) {
   return null;
 }
 
-// Helper: ensure amount is a number and use absolute value for aggregations
 function toNumber(n) {
   const v = Number(n);
   return isNaN(v) ? 0 : v;
 }
 
-// Small loading block for inside cards
 function CardSkeleton({ height = 80 }) {
   return (
     <div
@@ -117,7 +164,6 @@ function CardSkeleton({ height = 80 }) {
   );
 }
 
-// Simple CSV escape
 function escapeCsv(value) {
   const str = value == null ? "" : String(value);
   const escaped = str.replace(/"/g, '""');
@@ -129,12 +175,13 @@ export default function FinanceDashboard({ user, onLogout }) {
 
   const [transactions, setTransactions] = useState([]);
   const [budgets, setBudgets] = useState([]);
+  const [goals, setGoals] = useState([]);
 
   const [isLoadingTx, setIsLoadingTx] = useState(true);
   const [isLoadingBudgets, setIsLoadingBudgets] = useState(true);
+  const [isLoadingGoals, setIsLoadingGoals] = useState(true);
   const [exportMessage, setExportMessage] = useState("");
 
-  // Inject CSS once
   useEffect(() => {
     const styleTag = document.createElement("style");
     styleTag.innerHTML = DASHBOARD_STYLES;
@@ -144,7 +191,7 @@ export default function FinanceDashboard({ user, onLogout }) {
     };
   }, []);
 
-  // Load transactions (live)
+  // Load transactions
   useEffect(() => {
     if (!userId) return;
 
@@ -161,16 +208,13 @@ export default function FinanceDashboard({ user, onLogout }) {
         setTransactions(arr);
         setIsLoadingTx(false);
       },
-      () => {
-        // error case
-        setIsLoadingTx(false);
-      }
+      () => setIsLoadingTx(false)
     );
 
     return () => unsub();
   }, [userId]);
 
-  // Load budgets (per category)
+  // Load budgets
   useEffect(() => {
     if (!userId) return;
     setIsLoadingBudgets(true);
@@ -184,15 +228,33 @@ export default function FinanceDashboard({ user, onLogout }) {
         setBudgets(arr);
         setIsLoadingBudgets(false);
       },
-      () => {
-        setIsLoadingBudgets(false);
-      }
+      () => setIsLoadingBudgets(false)
     );
 
     return () => unsub();
   }, [userId]);
 
-  // KPI calculations (current month)
+  // Load goals
+  useEffect(() => {
+    if (!userId) return;
+    setIsLoadingGoals(true);
+
+    const q = query(collection(db, "goals"), where("userId", "==", userId));
+
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const arr = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setGoals(arr);
+        setIsLoadingGoals(false);
+      },
+      () => setIsLoadingGoals(false)
+    );
+
+    return () => unsub();
+  }, [userId]);
+
+  // KPI calculations
   const now = new Date();
   const monthKey = (d) => `${d.getFullYear()}-${d.getMonth() + 1}`;
   const currentMonthKey = monthKey(now);
@@ -213,14 +275,13 @@ export default function FinanceDashboard({ user, onLogout }) {
 
   const net = monthlyIncome - monthlyExpense;
 
-  // Pie chart data (expenses by category - current month only)
+  // Pie data
   const byCategory = {};
   transactions.forEach((t) => {
     if (t.type !== "expense") return;
     const dateObj = toDate(t.date);
     if (!dateObj) return;
-    const tMonth = monthKey(dateObj);
-    if (tMonth !== currentMonthKey) return;
+    if (monthKey(dateObj) !== currentMonthKey) return;
 
     const amt = Math.abs(toNumber(t.amount));
     const cat = t.category || "Other";
@@ -233,7 +294,7 @@ export default function FinanceDashboard({ user, onLogout }) {
     value: byCategory[k],
   }));
 
-  // 6-month trend (all data)
+  // 6-month trend
   const months = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date();
@@ -261,7 +322,7 @@ export default function FinanceDashboard({ user, onLogout }) {
     return { name: m.label, Income: inc, Expense: exp };
   });
 
-  // Budget progress (per category)
+  // Budgets
   const budgetProgress = budgets.map((b) => {
     const limit = Math.max(toNumber(b.limit), 0);
 
@@ -275,13 +336,14 @@ export default function FinanceDashboard({ user, onLogout }) {
     const usedPct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
     const remaining = Math.max(limit - spent, 0);
 
-    let statusColor = "#4caf50"; // safe
-    if (usedPct >= 80 && usedPct <= 100) statusColor = "#ff9800"; // warning
-    if (usedPct > 100) statusColor = "#f44336"; // over
+    // 🎨 Color logic: <80% green, 80–99% yellow, 100%+ red
+    let statusColor = "#4caf50";
+    if (usedPct >= 80 && usedPct < 100) statusColor = "#ffbf00"; // yellow-ish
+    if (usedPct >= 100) statusColor = "#f44336";
 
     let statusText = "On track";
-    if (usedPct >= 80 && usedPct <= 100) statusText = "Close to limit";
-    if (usedPct > 100) statusText = "Over budget";
+    if (usedPct >= 80 && usedPct < 100) statusText = "Close to limit";
+    if (usedPct >= 100) statusText = "Over budget";
 
     return {
       id: b.id,
@@ -295,14 +357,37 @@ export default function FinanceDashboard({ user, onLogout }) {
     };
   });
 
-  // NEW: data for budget bar chart
   const budgetChartData = budgetProgress.map((b) => ({
     category: b.category,
     Spent: b.spent,
     Remaining: b.remaining,
   }));
 
-  // Styles: white cards for clarity — set text color explicitly to black
+  // Goals progress (for dashboard cards)
+  const goalCards = goals.map((g) => {
+    const target = Math.max(toNumber(g.targetAmount), 0);
+    const saved = Math.max(toNumber(g.currentSavedAmount ?? 0), 0);
+    const pct = target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0;
+    const remaining = Math.max(target - saved, 0);
+
+    let barColor = "#4caf50";
+    if (pct >= 80 && pct < 100) barColor = "#ffbf00";
+    if (pct >= 100) barColor = "#22c55e"; // completed = bright green
+
+    return {
+      id: g.id,
+      name: g.goalName || "Untitled Goal",
+      target,
+      saved,
+      pct,
+      remaining,
+      barColor,
+      targetDate: g.targetDate
+        ? toDate(g.targetDate)?.toLocaleDateString()
+        : null,
+    };
+  });
+
   const cardStyle = {
     background: "#ffffff",
     color: "#000",
@@ -313,21 +398,14 @@ export default function FinanceDashboard({ user, onLogout }) {
 
   const kpiVal = { fontSize: 22, fontWeight: 800, color: "#000" };
 
-  // EXPORT CSV (all transactions)
+  // Export CSV
   const handleExportCsv = () => {
     if (!transactions.length) {
       alert("No transactions to export yet.");
       return;
     }
 
-    const header = [
-      "Date",
-      "Type",
-      "Category",
-      "Amount",
-      "Note",
-      "Created At",
-    ];
+    const header = ["Date", "Type", "Category", "Amount", "Note", "Created At"];
 
     const rows = transactions.map((t) => {
       const dateObj = toDate(t.date);
@@ -362,25 +440,48 @@ export default function FinanceDashboard({ user, onLogout }) {
     setTimeout(() => setExportMessage(""), 3000);
   };
 
+  // ✅ First time loading flag (for overlay)
+  const isInitialLoading =
+    isLoadingTx &&
+    isLoadingBudgets &&
+    isLoadingGoals &&
+    !transactions.length &&
+    !budgets.length &&
+    !goals.length;
+
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
-      {/* LEFT SIDEBAR */}
       <Sidebar />
 
       {/* MAIN AREA */}
-      <div style={{ flex: 1, padding: 18 }}>
-        {/* TOP NAV — logo left, profile right */}
+      <div style={{ flex: 1, padding: 18, position: "relative" }}>
+        {/* 🔄 PREMIUM LOADING OVERLAY */}
+        {isInitialLoading && (
+          <div className="dashboard-loading-overlay">
+            <div className="dashboard-loading-inner">
+              <div className="dashboard-spinner" />
+              <div className="dashboard-loading-text">
+                Loading your finance dashboard…
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TOP NAV - WHITE CARD */}
         <div
           style={{
+            ...cardStyle,
             display: "flex",
             alignItems: "center",
             gap: 12,
             marginBottom: 18,
+            paddingTop: 12,
+            paddingBottom: 12,
           }}
         >
           <BackButton label="←" />
 
-          <div style={{ fontSize: 20, fontWeight: 800, color: "#fff" }}>
+          <div style={{ fontSize: 20, fontWeight: 800, color: "#111827" }}>
             Dashboard
           </div>
 
@@ -392,9 +493,9 @@ export default function FinanceDashboard({ user, onLogout }) {
               gap: 12,
             }}
           >
-            <div style={{ color: "#0f0e0eff", opacity: 0.9 }}>
+            <div style={{ color: "#4b5563", opacity: 0.9 }}>
               Hi,{" "}
-              <strong style={{ color: "#0b0b0bff" }}>
+              <strong style={{ color: "#111827" }}>
                 {user?.displayName || (user?.email || "").split("@")[0]}
               </strong>
             </div>
@@ -434,7 +535,7 @@ export default function FinanceDashboard({ user, onLogout }) {
           </div>
         </div>
 
-        {/* Budget overview row */}
+        {/* Budget Overview */}
         <div style={{ ...cardStyle, marginBottom: 16 }}>
           <h4 style={{ marginTop: 0, color: "#000" }}>
             Budget Overview (Current Month)
@@ -446,7 +547,7 @@ export default function FinanceDashboard({ user, onLogout }) {
             <div style={{ color: "#666", fontSize: 14 }}>
               No budgets set yet. Configure category-wise limits from the
               <button
-                onClick={() => (window.location.href = "/settings")}
+                onClick={() => (window.location.href = "/budgets")}
                 style={{
                   marginLeft: 4,
                   padding: "4px 8px",
@@ -458,13 +559,13 @@ export default function FinanceDashboard({ user, onLogout }) {
                   fontSize: 12,
                 }}
               >
-                Settings
+                Budget Management
               </button>
               page.
             </div>
           ) : (
             <div className="budget-overview-layout">
-              {/* LEFT: list + progress bar */}
+              {/* List side */}
               <div style={{ display: "grid", gap: 10 }}>
                 {budgetProgress.map((b) => (
                   <div key={b.id}>
@@ -483,12 +584,13 @@ export default function FinanceDashboard({ user, onLogout }) {
                       </div>
                     </div>
 
+                    {/* Progress Bar */}
                     <div
                       style={{
                         width: "100%",
                         height: 10,
                         borderRadius: 999,
-                        background: "#e2e8f0",
+                        background: "#f1f5f9", // white-ish track
                         overflow: "hidden",
                       }}
                     >
@@ -516,7 +618,7 @@ export default function FinanceDashboard({ user, onLogout }) {
                 ))}
               </div>
 
-              {/* RIGHT: stacked bar chart (Spent vs Remaining) */}
+              {/* Chart side */}
               <div style={{ width: "100%", height: 220 }}>
                 <ResponsiveContainer>
                   <BarChart
@@ -542,9 +644,126 @@ export default function FinanceDashboard({ user, onLogout }) {
           )}
         </div>
 
+        {/* Goals section */}
+        <div style={{ ...cardStyle, marginBottom: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              marginBottom: 8,
+              gap: 8,
+            }}
+          >
+            <h4 style={{ margin: 0, color: "#000" }}>Goals Progress</h4>
+            <button
+              onClick={() => (window.location.href = "/goals")}
+              style={{
+                marginLeft: "auto",
+                padding: "4px 10px",
+                borderRadius: 999,
+                border: "none",
+                fontSize: 11,
+                background: "#0b7b5b",
+                color: "#fff",
+                cursor: "pointer",
+              }}
+            >
+              Manage Goals
+            </button>
+          </div>
+
+          {isLoadingGoals ? (
+            <CardSkeleton height={80} />
+          ) : goalCards.length === 0 ? (
+            <div style={{ color: "#666", fontSize: 14 }}>
+              No goals yet. Create your first savings goal from the Goal Setting
+              page.
+            </div>
+          ) : (
+            <div className="goals-grid">
+              {goalCards.map((g) => (
+                <div
+                  key={g.id}
+                  style={{
+                    padding: 12,
+                    borderRadius: 10,
+                    border: "1px solid #e5e7eb",
+                    background: "#f9fafb",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 14,
+                      marginBottom: 4,
+                      color: "#111827",
+                    }}
+                  >
+                    {g.name}
+                  </div>
+                  {g.targetDate && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "#6b7280",
+                        marginBottom: 4,
+                      }}
+                    >
+                      Target date: {g.targetDate}
+                    </div>
+                  )}
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: 12,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span>Saved: ₹{g.saved.toFixed(0)}</span>
+                    <span>Target: ₹{g.target.toFixed(0)}</span>
+                  </div>
+
+                  <div
+                    style={{
+                      width: "100%",
+                      height: 8,
+                      borderRadius: 999,
+                      background: "#e5e7eb",
+                      overflow: "hidden",
+                      marginBottom: 4,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${g.pct}%`,
+                        height: "100%",
+                        background: g.barColor,
+                        transition: "width 0.3s ease",
+                      }}
+                    />
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "#374151",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      marginTop: 2,
+                    }}
+                  >
+                    <span>{g.pct}% complete</span>
+                    <span>Left: ₹{g.remaining.toFixed(0)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Charts row */}
         <div className="dashboard-grid-2">
-          {/* Pie chart container — white card */}
           <div style={cardStyle}>
             <h4 style={{ marginTop: 0, color: "#000" }}>Spending Breakdown</h4>
             {isLoadingTx ? (
@@ -575,7 +794,6 @@ export default function FinanceDashboard({ user, onLogout }) {
             )}
           </div>
 
-          {/* Bar chart container — white card */}
           <div style={cardStyle}>
             <h4 style={{ marginTop: 0, color: "#000" }}>
               6-Month Income vs Expense
@@ -687,6 +905,34 @@ export default function FinanceDashboard({ user, onLogout }) {
                 }}
               >
                 ➕ Add Transaction
+              </button>
+
+              <button
+                onClick={() => (window.location.href = "/budgets")}
+                style={{
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "none",
+                  background: "#16a34a",
+                  color: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                🎯 Manage Budgets
+              </button>
+
+              <button
+                onClick={() => (window.location.href = "/goals")}
+                style={{
+                  padding: 10,
+                  borderRadius: 8,
+                  border: "none",
+                  background: "#f97316",
+                  color: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                💰 Goal Setting
               </button>
 
               <button

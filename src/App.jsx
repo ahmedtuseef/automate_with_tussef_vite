@@ -16,6 +16,10 @@ import YourProfile from "./pages/YourProfile";
 import ReportsPage from "./pages/ReportsPage";
 import RecurringTransactionsPage from "./pages/RecurringTransactionsPage";
 
+// 🔁 NEW: Budget & Goals pages
+import BudgetManagementPage from "./pages/BudgetManagementPage";
+import GoalSettingPage from "./pages/GoalSettingPage";
+
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./firebase";
 
@@ -152,6 +156,26 @@ export default function App() {
         element={
           <ProtectedRoute user={user} loading={checkingAuth}>
             <RecurringTransactionsPage user={user} onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 🔁 NEW: Budget Management page */}
+      <Route
+        path="/budgets"
+        element={
+          <ProtectedRoute user={user} loading={checkingAuth}>
+            <BudgetManagementPage user={user} onLogout={handleLogout} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 🔁 NEW: Goal Setting page */}
+      <Route
+        path="/goals"
+        element={
+          <ProtectedRoute user={user} loading={checkingAuth}>
+            <GoalSettingPage user={user} onLogout={handleLogout} />
           </ProtectedRoute>
         }
       />

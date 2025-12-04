@@ -12,7 +12,7 @@ export default function BackButton({ label = "←", styleOverride = {} }) {
       style={{
         background: "transparent",
         border: "none",
-        color: "#fff",
+        color: "#121111ff",
         fontSize: 20,
         fontWeight: 800,
         cursor: "pointer",
