@@ -1,5 +1,6 @@
 // src/pages/FinanceDashboard.jsx
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // ✅ NEW
 import Sidebar from "../components/Sidebar";
 import ProfileMenu from "../components/ProfileMenu";
 import BackButton from "../components/BackButton";
@@ -77,52 +78,6 @@ const DASHBOARD_STYLES = `
     gap: 12px;
   }
 
-  /* LOADING OVERLAY + SPINNER */
-  @keyframes dashboard-spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-
-  .dashboard-loading-overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: radial-gradient(circle at top, rgba(15,23,42,0.38), rgba(15,23,42,0.8));
-    z-index: 20;
-  }
-
-  .dashboard-loading-inner {
-    background: linear-gradient(135deg, rgba(15,23,42,0.95), rgba(30,64,175,0.9));
-    padding: 20px 28px;
-    border-radius: 18px;
-    border: 1px solid rgba(148,163,184,0.6);
-    box-shadow: 0 20px 60px rgba(0,0,0,0.7);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    min-width: 260px;
-  }
-
-  .dashboard-spinner {
-    width: 48px;
-    height: 48px;
-    border-radius: 999px;
-    border: 3px solid rgba(148,163,184,0.45);
-    border-top-color: #0ea5e9;
-    border-right-color: #22c55e;
-    animation: dashboard-spin 0.8s linear infinite;
-    box-shadow: 0 0 0 3px rgba(15,23,42,0.55);
-  }
-
-  .dashboard-loading-text {
-    font-size: 14px;
-    color: #e5f2ff;
-    text-align: center;
-  }
-
   @media (max-width: 900px) {
     .dashboard-grid-3 {
       grid-template-columns: minmax(0, 1fr);
@@ -170,8 +125,85 @@ function escapeCsv(value) {
   return `"${escaped}"`;
 }
 
+// 🔢 Small helpers for calendar
+const pad2 = (n) => String(n).padStart(2, "0");
+const weekdayShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/**
+ * Build monthly expense calendar data for the given month (based on `now`)
+ * - Only "expense" transactions
+ * - Groups by date
+ */
+function buildMonthlyExpenseCalendar(transactions, now) {
+  const year = now.getFullYear();
+  const monthIdx = now.getMonth(); // 0-based
+  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+  // Sum expenses per ISO date
+  const expenseByDate = {};
+  transactions.forEach((t) => {
+    if (t.type !== "expense") return;
+    const dateObj = toDate(t.date);
+    if (!dateObj) return;
+    if (dateObj.getFullYear() !== year || dateObj.getMonth() !== monthIdx)
+      return;
+
+    const iso = `${year}-${pad2(monthIdx + 1)}-${pad2(dateObj.getDate())}`;
+    const amt = Math.abs(toNumber(t.amount));
+    if (!expenseByDate[iso]) expenseByDate[iso] = 0;
+    expenseByDate[iso] += amt;
+  });
+
+  const allVals = Object.values(expenseByDate);
+  const maxExpense = allVals.length ? Math.max(...allVals) : 0;
+
+  const firstDay = new Date(year, monthIdx, 1);
+  const firstWeekday = firstDay.getDay(); // 0 = Sun
+
+  const cells = [];
+
+  // leading empty cells
+  for (let i = 0; i < firstWeekday; i++) {
+    cells.push({ key: `empty-start-${i}`, day: null, iso: null, total: 0 });
+  }
+
+  // real days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = `${year}-${pad2(monthIdx + 1)}-${pad2(d)}`;
+    cells.push({
+      key: iso,
+      day: d,
+      iso,
+      total: expenseByDate[iso] || 0,
+    });
+  }
+
+  // trailing empties to complete weeks
+  while (cells.length % 7 !== 0) {
+    cells.push({
+      key: `empty-end-${cells.length}`,
+      day: null,
+      iso: null,
+      total: 0,
+    });
+  }
+
+  const rows = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    rows.push(cells.slice(i, i + 7));
+  }
+
+  const monthLabel = now.toLocaleString("default", {
+    month: "long",
+    year: "numeric",
+  });
+
+  return { rows, maxExpense, monthLabel };
+}
+
 export default function FinanceDashboard({ user, onLogout }) {
   const userId = user?.uid;
+  const navigate = useNavigate(); // ✅ NEW
 
   const [transactions, setTransactions] = useState([]);
   const [budgets, setBudgets] = useState([]);
@@ -336,9 +368,8 @@ export default function FinanceDashboard({ user, onLogout }) {
     const usedPct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
     const remaining = Math.max(limit - spent, 0);
 
-    // 🎨 Color logic: <80% green, 80–99% yellow, 100%+ red
     let statusColor = "#4caf50";
-    if (usedPct >= 80 && usedPct < 100) statusColor = "#ffbf00"; // yellow-ish
+    if (usedPct >= 80 && usedPct < 100) statusColor = "#ffbf00";
     if (usedPct >= 100) statusColor = "#f44336";
 
     let statusText = "On track";
@@ -367,7 +398,8 @@ export default function FinanceDashboard({ user, onLogout }) {
   const goalCards = goals.map((g) => {
     const target = Math.max(toNumber(g.targetAmount), 0);
     const saved = Math.max(toNumber(g.currentSavedAmount ?? 0), 0);
-    const pct = target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0;
+    const pct =
+      target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0;
     const remaining = Math.max(target - saved, 0);
 
     let barColor = "#4caf50";
@@ -387,6 +419,9 @@ export default function FinanceDashboard({ user, onLogout }) {
         : null,
     };
   });
+
+  // 📅 Monthly calendar data (current month)
+  const calendarData = buildMonthlyExpenseCalendar(transactions, now);
 
   const cardStyle = {
     background: "#ffffff",
@@ -547,7 +582,8 @@ export default function FinanceDashboard({ user, onLogout }) {
             <div style={{ color: "#666", fontSize: 14 }}>
               No budgets set yet. Configure category-wise limits from the
               <button
-                onClick={() => (window.location.href = "/budgets")}
+                type="button"
+                onClick={() => navigate("/budgets")} // ✅ UPDATED
                 style={{
                   marginLeft: 4,
                   padding: "4px 8px",
@@ -590,7 +626,7 @@ export default function FinanceDashboard({ user, onLogout }) {
                         width: "100%",
                         height: 10,
                         borderRadius: 999,
-                        background: "#f1f5f9", // white-ish track
+                        background: "#f1f5f9",
                         overflow: "hidden",
                       }}
                     >
@@ -656,7 +692,8 @@ export default function FinanceDashboard({ user, onLogout }) {
           >
             <h4 style={{ margin: 0, color: "#000" }}>Goals Progress</h4>
             <button
-              onClick={() => (window.location.href = "/goals")}
+              type="button"
+              onClick={() => navigate("/goals")} // ✅ UPDATED
               style={{
                 marginLeft: "auto",
                 padding: "4px 10px",
@@ -759,6 +796,143 @@ export default function FinanceDashboard({ user, onLogout }) {
                 </div>
               ))}
             </div>
+          )}
+        </div>
+
+        {/* 📅 NEW: Monthly Expense Calendar */}
+        <div style={{ ...cardStyle, marginBottom: 16 }}>
+          <h4 style={{ marginTop: 0, color: "#000" }}>
+            Monthly Expense Calendar (Current Month)
+          </h4>
+          <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>
+            Darker red days = higher spending. Each cell shows total expenses
+            for that day.
+          </div>
+
+          {isLoadingTx ? (
+            <CardSkeleton height={240} />
+          ) : (
+            <>
+              {/* Weekday header */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+                  gap: 4,
+                  marginBottom: 4,
+                  fontSize: 11,
+                  color: "#6b7280",
+                  textTransform: "uppercase",
+                }}
+              >
+                {weekdayShort.map((d) => (
+                  <div
+                    key={d}
+                    style={{
+                      textAlign: "center",
+                      fontWeight: 600,
+                    }}
+                  >
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar rows */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+                  gap: 4,
+                  fontSize: 11,
+                }}
+              >
+                {calendarData.rows.flat().map((cell) => {
+                  if (!cell.day) {
+                    return (
+                      <div
+                        key={cell.key}
+                        style={{
+                          minHeight: 54,
+                          borderRadius: 8,
+                          background: "transparent",
+                        }}
+                      />
+                    );
+                  }
+
+                  const total = cell.total;
+                  let bg = "#f9fafb";
+                  let border = "#e5e7eb";
+                  let amountColor = "#111827";
+
+                  if (total > 0 && calendarData.maxExpense > 0) {
+                    const ratio = total / calendarData.maxExpense;
+                    const alpha = 0.18 + 0.55 * Math.min(1, ratio);
+                    bg = `rgba(248, 113, 113, ${alpha.toFixed(2)})`; // red-400 with variable alpha
+                    border = "rgba(248,113,113,0.7)";
+                    amountColor = "#111827";
+                  }
+
+                  return (
+                    <div
+                      key={cell.key}
+                      style={{
+                        minHeight: 54,
+                        borderRadius: 8,
+                        background: bg,
+                        border: `1px solid ${border}`,
+                        padding: 6,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#111827",
+                        }}
+                      >
+                        {cell.day}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textAlign: "right",
+                          color: amountColor,
+                        }}
+                      >
+                        {total > 0 ? `₹${total.toFixed(0)}` : "—"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 8,
+                  fontSize: 11,
+                  color: "#6b7280",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 4,
+                }}
+              >
+                <span>{calendarData.monthLabel}</span>
+                <span>
+                  Total days with expenses:{" "}
+                  {
+                    calendarData.rows.flat().filter((c) => c.day && c.total > 0)
+                      .length
+                  }
+                </span>
+              </div>
+            </>
           )}
         </div>
 
@@ -870,8 +1044,7 @@ export default function FinanceDashboard({ user, onLogout }) {
                         <div
                           style={{
                             textAlign: "right",
-                            color:
-                              tx.type === "income" ? "#0b8a4e" : "#d32f2f",
+                            color: tx.type === "income" ? "#0b8a4e" : "#d32f2f",
                             fontWeight: 800,
                           }}
                         >
@@ -894,7 +1067,8 @@ export default function FinanceDashboard({ user, onLogout }) {
               }}
             >
               <button
-                onClick={() => (window.location.href = "/transactions")}
+                type="button"
+                onClick={() => navigate("/transactions")} // ✅ UPDATED
                 style={{
                   padding: 10,
                   borderRadius: 8,
@@ -908,7 +1082,8 @@ export default function FinanceDashboard({ user, onLogout }) {
               </button>
 
               <button
-                onClick={() => (window.location.href = "/budgets")}
+                type="button"
+                onClick={() => navigate("/budgets")} // ✅ UPDATED
                 style={{
                   padding: 10,
                   borderRadius: 8,
@@ -922,7 +1097,8 @@ export default function FinanceDashboard({ user, onLogout }) {
               </button>
 
               <button
-                onClick={() => (window.location.href = "/goals")}
+                type="button"
+                onClick={() => navigate("/goals")} // ✅ UPDATED
                 style={{
                   padding: 10,
                   borderRadius: 8,
@@ -936,7 +1112,8 @@ export default function FinanceDashboard({ user, onLogout }) {
               </button>
 
               <button
-                onClick={() => (window.location.href = "/reports")}
+                type="button"
+                onClick={() => navigate("/reports")} // ✅ UPDATED
                 style={{
                   padding: 10,
                   borderRadius: 8,
@@ -950,7 +1127,8 @@ export default function FinanceDashboard({ user, onLogout }) {
               </button>
 
               <button
-                onClick={() => (window.location.href = "/recurring")}
+                type="button"
+                onClick={() => navigate("/recurring")} // ✅ UPDATED
                 style={{
                   padding: 10,
                   borderRadius: 8,
@@ -964,6 +1142,7 @@ export default function FinanceDashboard({ user, onLogout }) {
               </button>
 
               <button
+                type="button"
                 onClick={handleExportCsv}
                 style={{
                   padding: 10,

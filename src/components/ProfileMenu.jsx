@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 
 export default function ProfileMenu({ user, onLogout }) {
   const [open, setOpen] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const menuRef = useRef();
   const navigate = useNavigate();
 
@@ -21,87 +22,183 @@ export default function ProfileMenu({ user, onLogout }) {
   const userName = user?.displayName || userEmail.split("@")[0] || "User";
 
   return (
-    <div style={{ position: "relative" }} ref={menuRef}>
-      <button
-        onClick={() => setOpen(!open)}
-        style={{
-          background: "#0b2430",
-          padding: "8px 14px",
-          borderRadius: 8,
-          border: "1px solid #0c3a56",
-          color: "#fff",
-          cursor: "pointer",
-        }}
-      >
-        Your Profile ▾
-      </button>
-
-      {open && (
-        <div
+    <>
+      {/* Profile Menu */}
+      <div style={{ position: "relative" }} ref={menuRef}>
+        <button
+          onClick={() => setOpen(!open)}
           style={{
-            position: "absolute",
-            top: "46px",
-            right: 0,
-            width: 220,
-            background: "#ffffff",
-            borderRadius: 10,
-            padding: 14,
-            boxShadow: "0 8px 20px rgba(0,0,0,0.18)",
-            border: "1px solid #ddd",
-            zIndex: 999,
+            background: "#0b2430",
+            padding: "8px 14px",
+            borderRadius: 8,
+            border: "1px solid #0c3a56",
+            color: "#fff",
+            cursor: "pointer",
           }}
         >
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#0b2430" }}>{userName}</div>
-          <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>{userEmail}</div>
+          Your Profile ▾
+        </button>
 
-          <hr style={{ border: "none", borderTop: "1px solid #eee", margin: "8px 0" }} />
-
-          <button
-            onClick={() => {
-              setOpen(false);
-              navigate("/profile");
-            }}
+        {open && (
+          <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 0",
-              background: "none",
-              border: "none",
-              width: "100%",
-              textAlign: "left",
-              cursor: "pointer",
-              color: "#0b2430",
-              fontWeight: 600,
+              position: "absolute",
+              top: "46px",
+              right: 0,
+              width: 220,
+              background: "#ffffff",
+              borderRadius: 10,
+              padding: 14,
+              boxShadow: "0 8px 20px rgba(0,0,0,0.18)",
+              border: "1px solid #ddd",
+              zIndex: 999,
             }}
           >
-            Your Profile
-          </button>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "#0b2430" }}>
+              {userName}
+            </div>
+            <div style={{ fontSize: 12, color: "#666", marginBottom: 10 }}>
+              {userEmail}
+            </div>
 
-          <button
-            onClick={() => {
-              setOpen(false);
-              if (typeof onLogout === "function") onLogout();
-              else navigate("/logout");
-            }}
+            <hr
+              style={{
+                border: "none",
+                borderTop: "1px solid #eee",
+                margin: "8px 0",
+              }}
+            />
+
+            <button
+              onClick={() => {
+                setOpen(false);
+                navigate("/profile");
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 0",
+                background: "none",
+                border: "none",
+                width: "100%",
+                textAlign: "left",
+                cursor: "pointer",
+                color: "#0b2430",
+                fontWeight: 600,
+              }}
+            >
+              Your Profile
+            </button>
+
+            <button
+              onClick={() => {
+                setOpen(false);
+                setShowLogoutModal(true); // 🔥 Show confirmation modal
+              }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "8px 0",
+                background: "none",
+                border: "none",
+                width: "100%",
+                textAlign: "left",
+                cursor: "pointer",
+                color: "#d62828",
+                fontWeight: 600,
+              }}
+            >
+              🔴 Logout
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(4px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 2000,
+          }}
+        >
+          <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "8px 0",
-              background: "none",
-              border: "none",
-              width: "100%",
-              textAlign: "left",
-              cursor: "pointer",
-              color: "#d62828",
-              fontWeight: 600,
+              width: "90%",
+              maxWidth: 380,
+              padding: 22,
+              background: "#ffffff",
+              borderRadius: 16,
+              boxShadow: "0 8px 35px rgba(0,0,0,0.28)",
+              textAlign: "center",
+              animation: "fadeIn 0.25s ease",
             }}
           >
-            🔴 Logout
-          </button>
+            <h3 style={{ margin: 0, fontSize: 20, color: "#0b2430" }}>
+              Log out?
+            </h3>
+            <p
+              style={{
+                marginTop: 6,
+                fontSize: 14,
+                color: "#475569",
+              }}
+            >
+              Are you sure you want to log out of your account?
+            </p>
+
+            {/* Buttons */}
+            <div
+              style={{
+                marginTop: 18,
+                display: "flex",
+                justifyContent: "center",
+                gap: 12,
+              }}
+            >
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 8,
+                  border: "1px solid #cbd5e1",
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowLogoutModal(false);
+                  if (typeof onLogout === "function") onLogout();
+                }}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 8,
+                  border: "none",
+                  background: "#dc2626",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Yes, Logout
+              </button>
+            </div>
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

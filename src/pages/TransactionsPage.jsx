@@ -62,30 +62,54 @@ function TransactionsWithCards({ stats = {} }) {
       <div style={container}>
         <div style={cardStyle}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>Balance</div>
-          <div style={{ marginTop: 8, fontSize: 20, fontWeight: 800 }}>{fmt(balance)}</div>
+          <div style={{ marginTop: 8, fontSize: 20, fontWeight: 800 }}>
+            {fmt(balance)}
+          </div>
           <div style={{ marginTop: 6, fontSize: 12 }}>Available</div>
         </div>
 
         <div style={cardStyle}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>Income</div>
-          <div style={{ marginTop: 8, fontSize: 20, fontWeight: 800, color: "#047857" }}>{fmt(income)}</div>
+          <div
+            style={{
+              marginTop: 8,
+              fontSize: 20,
+              fontWeight: 800,
+              color: "#047857",
+            }}
+          >
+            {fmt(income)}
+          </div>
           <div style={{ marginTop: 6, fontSize: 12 }}>This month</div>
         </div>
 
         <div style={cardStyle}>
           <div style={{ fontSize: 13, fontWeight: 600 }}>Expenses</div>
-          <div style={{ marginTop: 8, fontSize: 20, fontWeight: 800, color: "#b91c1c" }}>{fmt(expense)}</div>
+          <div
+            style={{
+              marginTop: 8,
+              fontSize: 20,
+              fontWeight: 800,
+              color: "#b91c1c",
+            }}
+          >
+            {fmt(expense)}
+          </div>
           <div style={{ marginTop: 6, fontSize: 12 }}>This month</div>
         </div>
       </div>
 
-      <div style={{ marginTop: 8, fontSize: 13 }}>Overview • Updated just now</div>
+      <div style={{ marginTop: 8, fontSize: 13 }}>
+        Overview • Updated just now
+      </div>
     </div>
   );
 }
 
 export default function TransactionsPage({ user }) {
-  const [currentUser, setCurrentUser] = useState(user || auth.currentUser || null);
+  const [currentUser, setCurrentUser] = useState(
+    user || auth.currentUser || null
+  );
   const userId = currentUser?.uid;
   const [transactions, setTransactions] = useState([]);
   const [editing, setEditing] = useState(null);
@@ -111,7 +135,11 @@ export default function TransactionsPage({ user }) {
     if (showAll) {
       q = query(collection(db, "transactions"), orderBy("createdAt", "desc"));
     } else {
-      q = query(collection(db, "transactions"), where("userId", "==", userId), orderBy("createdAt", "desc"));
+      q = query(
+        collection(db, "transactions"),
+        where("userId", "==", userId),
+        orderBy("createdAt", "desc")
+      );
     }
 
     const unsub = onSnapshot(
@@ -165,7 +193,9 @@ export default function TransactionsPage({ user }) {
     if (!userId) return;
 
     try {
-      const dateField = data.date ? Timestamp.fromDate(new Date(data.date)) : serverTimestamp();
+      const dateField = data.date
+        ? Timestamp.fromDate(new Date(data.date))
+        : serverTimestamp();
       await addDoc(collection(db, "transactions"), {
         ...data,
         amount: Number(data.amount),
@@ -185,7 +215,8 @@ export default function TransactionsPage({ user }) {
         amount: Number(data.amount),
         updatedAt: serverTimestamp(),
       };
-      if (data.date) updatePayload.date = Timestamp.fromDate(new Date(data.date));
+      if (data.date)
+        updatePayload.date = Timestamp.fromDate(new Date(data.date));
 
       await updateDoc(doc(db, "transactions", id), updatePayload);
       setEditing(null);
@@ -205,29 +236,65 @@ export default function TransactionsPage({ user }) {
   }
 
   return (
-    <div style={{ minHeight: "80vh", padding: 24, display: "flex", justifyContent: "center", color: "#000" }}>
+    <div
+      style={{
+        minHeight: "80vh",
+        padding: 24,
+        display: "flex",
+        justifyContent: "center",
+        color: "#000",
+      }}
+    >
       <div style={{ width: "100%", maxWidth: 1100, color: "#000" }}>
-        
         {/* HEADER */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, color: "#000" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            marginBottom: 14,
+            color: "#000",
+          }}
+        >
           <BackButton label="←" />
           <h2 style={{ color: "#000", margin: 0 }}>Transactions</h2>
 
           <div style={{ marginLeft: "auto", color: "#000" }}>
-            {currentUser ? `Signed in as: ${currentUser.email}` : "Not signed in"}
+            {currentUser
+              ? `Signed in as: ${currentUser.email}`
+              : "Not signed in"}
           </div>
         </div>
 
         {/* Summary cards */}
-        <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 12, color: "#000" }}>
+        <div
+          style={{
+            marginBottom: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            color: "#000",
+          }}
+        >
           <div style={{ flex: 1 }}>
             <TransactionsWithCards stats={totals} />
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, color: "#000" }}>
-            <button style={{ padding: "8px 12px", borderRadius: 8 }}>Debug: Log all</button>
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              color: "#000",
+            }}
+          >
+            <button style={{ padding: "8px 12px", borderRadius: 8 }}>
+              Debug: Log all
+            </button>
 
-            <label style={{ color: "#000", fontSize: 13, display: "flex", gap: 8 }}>
+            <label
+              style={{ color: "#000", fontSize: 13, display: "flex", gap: 8 }}
+            >
               <input
                 type="checkbox"
                 checked={showAll}
@@ -239,14 +306,30 @@ export default function TransactionsPage({ user }) {
         </div>
 
         {/* BODY */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 420px", gap: 20, color: "#000" }}>
-          
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 420px",
+            gap: 20,
+            color: "#000",
+          }}
+        >
           {/* LEFT LIST */}
-          <div style={{ background: "#fff", borderRadius: 12, padding: 18, boxShadow: "0 8px 30px rgba(2,6,23,0.08)", color: "#000" }}>
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: 18,
+              boxShadow: "0 8px 30px rgba(2,6,23,0.08)",
+              color: "#000",
+            }}
+          >
             <h4 style={{ marginTop: 0, color: "#000" }}>Recent Transactions</h4>
 
             {transactions.length === 0 ? (
-              <div style={{ padding: 28, textAlign: "center", color: "#000" }}>No transactions yet</div>
+              <div style={{ padding: 28, textAlign: "center", color: "#000" }}>
+                No transactions yet
+              </div>
             ) : (
               <div style={{ display: "grid", gap: 12 }}>
                 {transactions.map((tx) => {
@@ -274,19 +357,35 @@ export default function TransactionsPage({ user }) {
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 700, color: "#000" }}>{tx.category}</div>
-                        <div style={{ fontSize: 12, color: "#000" }}>{dateText}</div>
-                        {tx.note && <div style={{ marginTop: 6, color: "#000" }}>{tx.note}</div>}
+                        <div style={{ fontWeight: 700, color: "#000" }}>
+                          {tx.category}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#000" }}>
+                          {dateText}
+                        </div>
+                        {tx.note && (
+                          <div style={{ marginTop: 6, color: "#000" }}>
+                            {tx.note}
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ textAlign: "right", color: "#000" }}>
-                        <div style={{ fontWeight: 800, color: tx.type === "income" ? "#047857" : "#b91c1c" }}>
+                        <div
+                          style={{
+                            fontWeight: 800,
+                            color: tx.type === "income" ? "#047857" : "#b91c1c",
+                          }}
+                        >
                           {formatSignedAmount(tx.amount, tx.type)}
                         </div>
 
                         <div style={{ marginTop: 8, display: "flex", gap: 8 }}>
                           <button onClick={() => setEditing(tx)}>Edit</button>
-                          <button onClick={() => removeTransaction(tx.id)} style={{ color: "#b91c1c" }}>
+                          <button
+                            onClick={() => removeTransaction(tx.id)}
+                            style={{ color: "#b91c1c" }}
+                          >
                             Delete
                           </button>
                         </div>
@@ -299,14 +398,24 @@ export default function TransactionsPage({ user }) {
           </div>
 
           {/* RIGHT FORM */}
-          <aside style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 8px 30px rgba(2,6,23,0.08)", color: "#000" }}>
+          <aside
+            style={{
+              background: "#fff",
+              borderRadius: 12,
+              padding: 16,
+              boxShadow: "0 8px 30px rgba(2,6,23,0.08)",
+              color: "#000",
+            }}
+          >
             <h4 style={{ marginTop: 0, color: "#000" }}>
               {editing ? "Edit Transaction" : "Add New Transaction"}
             </h4>
 
             <TransactionForm
               initial={editing}
-              onSave={(data) => (editing ? saveEdit(editing.id, data) : addTransaction(data))}
+              onSave={(data) =>
+                editing ? saveEdit(editing.id, data) : addTransaction(data)
+              }
             />
 
             {editing && (
@@ -315,7 +424,6 @@ export default function TransactionsPage({ user }) {
               </div>
             )}
           </aside>
-
         </div>
       </div>
     </div>

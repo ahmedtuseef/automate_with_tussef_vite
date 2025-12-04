@@ -121,7 +121,14 @@ export default function StartPage() {
           }}
         >
           {/* LEFT SECTION */}
-          <div style={{ flex: 1.35, color: "#fff", display: "flex", flexDirection: "column" }}>
+          <div
+            style={{
+              flex: 1.35,
+              color: "#fff",
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
             {/* small badge row */}
             <div
               style={{
@@ -248,7 +255,7 @@ export default function StartPage() {
                     "0 18px 38px rgba(16,185,129,0.45), inset 0 -5px 16px rgba(0,0,0,0.18)";
                 }}
               >
-                Start using Balance board
+                Start using Finance Tracker
               </button>
 
               <span
@@ -301,8 +308,8 @@ export default function StartPage() {
                 }}
               >
                 Get a quick snapshot of your month in seconds. Add a
-                transaction, see its impact on your balance instantly, and
-                keep overspending in check without any spreadsheets.
+                transaction, see its impact on your balance instantly, and keep
+                overspending in check without any spreadsheets.
               </p>
 
               <div

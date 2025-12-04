@@ -37,6 +37,83 @@ function escapeCsv(value) {
   return `"${escaped}"`;
 }
 
+// 🔢 Calendar helpers
+const pad2 = (n) => String(n).padStart(2, "0");
+const weekdayShort = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/**
+ * Monthly expense calendar:
+ * - Only "expense" transactions
+ * - Uses filtered list (respecting filters)
+ * - Groups by date for current month
+ */
+function buildMonthlyExpenseCalendar(transactions, baseDate) {
+  const year = baseDate.getFullYear();
+  const monthIdx = baseDate.getMonth(); // 0-based
+  const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+
+  const expenseByDate = {};
+
+  transactions.forEach((t) => {
+    if (t.type !== "expense") return;
+
+    const d = t._dateObj || toDateSafe(t.date);
+    if (!d) return;
+    if (d.getFullYear() !== year || d.getMonth() !== monthIdx) return;
+
+    const iso = `${year}-${pad2(monthIdx + 1)}-${pad2(d.getDate())}`;
+    const amt = Math.abs(toNumber(t.amount));
+    if (!expenseByDate[iso]) expenseByDate[iso] = 0;
+    expenseByDate[iso] += amt;
+  });
+
+  const allVals = Object.values(expenseByDate);
+  const maxExpense = allVals.length ? Math.max(...allVals) : 0;
+
+  const firstDay = new Date(year, monthIdx, 1);
+  const firstWeekday = firstDay.getDay(); // 0=Sun
+
+  const cells = [];
+
+  // leading empty
+  for (let i = 0; i < firstWeekday; i++) {
+    cells.push({ key: `empty-start-${i}`, day: null, iso: null, total: 0 });
+  }
+
+  // days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const iso = `${year}-${pad2(monthIdx + 1)}-${pad2(d)}`;
+    cells.push({
+      key: iso,
+      day: d,
+      iso,
+      total: expenseByDate[iso] || 0,
+    });
+  }
+
+  // trailing empty to complete weeks
+  while (cells.length % 7 !== 0) {
+    cells.push({
+      key: `empty-end-${cells.length}`,
+      day: null,
+      iso: null,
+      total: 0,
+    });
+  }
+
+  const rows = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    rows.push(cells.slice(i, i + 7));
+  }
+
+  const monthLabel = baseDate.toLocaleString("default", {
+    month: "long",
+    year: "numeric",
+  });
+
+  return { rows, maxExpense, monthLabel };
+}
+
 // ---------- main component ----------
 export default function ReportsPage({ user, onLogout }) {
   const userId = user?.uid;
@@ -139,6 +216,12 @@ export default function ReportsPage({ user, onLogout }) {
     });
     return Object.values(map);
   }, [filtered]);
+
+  // 📅 Monthly calendar data (current month) – uses filtered list
+  const calendarData = useMemo(
+    () => buildMonthlyExpenseCalendar(filtered, new Date()),
+    [filtered]
+  );
 
   // ---------- export handler ----------
   const handleExport = () => {
@@ -392,6 +475,141 @@ export default function ReportsPage({ user, onLogout }) {
               Records: {filtered.length}
             </div>
           </div>
+        </section>
+
+        {/* 📅 Monthly Calendar View (Current Month) */}
+        <section style={{ ...card, marginTop: 16 }}>
+          <div style={{ fontWeight: 700, marginBottom: 4 }}>
+            Monthly Expense Calendar (Current Month)
+          </div>
+          <div
+            style={{
+              fontSize: 12,
+              color: "#64748b",
+              marginBottom: 8,
+            }}
+          >
+            Har din ke box me total expenses. Darker red = zyada kharcha.
+          </div>
+
+          {loading ? (
+            <div style={{ fontSize: 13, color: "#64748b" }}>Loading…</div>
+          ) : (
+            <>
+              {/* weekday header */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+                  gap: 4,
+                  marginBottom: 4,
+                  fontSize: 11,
+                  color: "#6b7280",
+                  textTransform: "uppercase",
+                }}
+              >
+                {weekdayShort.map((d) => (
+                  <div key={d} style={{ textAlign: "center", fontWeight: 600 }}>
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              {/* calendar cells */}
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(7, minmax(0, 1fr))",
+                  gap: 4,
+                  fontSize: 11,
+                }}
+              >
+                {calendarData.rows.flat().map((cell) => {
+                  if (!cell.day) {
+                    return (
+                      <div
+                        key={cell.key}
+                        style={{
+                          minHeight: 52,
+                          borderRadius: 8,
+                          background: "transparent",
+                        }}
+                      />
+                    );
+                  }
+
+                  const total = cell.total;
+                  let bg = "#f9fafb";
+                  let border = "#e5e7eb";
+                  let amountColor = "#111827";
+
+                  if (total > 0 && calendarData.maxExpense > 0) {
+                    const ratio = total / calendarData.maxExpense; // 0..1
+                    const alpha = 0.18 + 0.55 * Math.min(1, ratio);
+                    bg = `rgba(248,113,113,${alpha.toFixed(2)})`; // red-400-style
+                    border = "rgba(248,113,113,0.7)";
+                  }
+
+                  return (
+                    <div
+                      key={cell.key}
+                      style={{
+                        minHeight: 52,
+                        borderRadius: 8,
+                        background: bg,
+                        border: `1px solid ${border}`,
+                        padding: 6,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#111827",
+                        }}
+                      >
+                        {cell.day}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textAlign: "right",
+                          color: amountColor,
+                        }}
+                      >
+                        {total > 0 ? `₹${total.toFixed(0)}` : "—"}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div
+                style={{
+                  marginTop: 8,
+                  fontSize: 11,
+                  color: "#6b7280",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 4,
+                }}
+              >
+                <span>{calendarData.monthLabel}</span>
+                <span>
+                  Days with expenses:{" "}
+                  {
+                    calendarData.rows.flat().filter((c) => c.day && c.total > 0)
+                      .length
+                  }
+                </span>
+              </div>
+            </>
+          )}
         </section>
 
         {/* chart + table */}

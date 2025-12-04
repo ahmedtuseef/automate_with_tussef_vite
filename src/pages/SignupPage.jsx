@@ -2,11 +2,39 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  updateProfile,
+  sendEmailVerification,
+} from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 
 import { auth } from "../firebase";
 import BackButton from "../components/BackButton";
+
+// 🔐 Helper: password strength evaluator
+function evaluatePasswordStrength(password) {
+  if (!password) {
+    return { label: "", percent: 0, color: "#9ca3af" };
+  }
+
+  let score = 0;
+  if (password.length >= 8) score++;
+  if (password.length >= 12) score++;
+  if (/[a-z]/.test(password)) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  // 0–2 weak, 3–4 medium, 5–6 strong
+  if (score <= 2) {
+    return { label: "Weak", percent: 34, color: "#f97373" };
+  } else if (score <= 4) {
+    return { label: "Medium", percent: 67, color: "#facc15" };
+  } else {
+    return { label: "Strong", percent: 100, color: "#22c55e" };
+  }
+}
 
 export default function SignupPage() {
   const navigate = useNavigate();
@@ -94,13 +122,31 @@ export default function SignupPage() {
           dob: form.dob,
           username: form.username?.trim() || null,
           createdAt: new Date().toISOString(),
+          emailVerified: false,
         });
       } catch (dbErr) {
         console.warn("Could not save user to Firestore (optional):", dbErr);
       }
 
-      alert(`Account created for ${form.firstName} ${form.lastName} ✓`);
-      navigate("/login");
+      // ✉️ Send email verification
+      try {
+        await sendEmailVerification(user, {
+          // optional: handle in Firebase console / custom domain
+          url: window.location.origin + "/verify-email",
+        });
+      } catch (verr) {
+        console.warn("sendEmailVerification failed:", verr);
+      }
+
+      alert(
+        `Account created for ${form.firstName} ${form.lastName} ✓\n\nPlease verify your email before logging in.`
+      );
+
+      // Go to Verify Email page
+      navigate("/verify-email", {
+        replace: true,
+        state: { email: form.email.trim() },
+      });
     } catch (err) {
       console.error("Signup error:", err);
       const msg =
@@ -127,6 +173,8 @@ export default function SignupPage() {
         return "Signup failed. " + (code || "");
     }
   }
+
+  const passwordStrength = evaluatePasswordStrength(form.password);
 
   return (
     <div
@@ -365,7 +413,7 @@ export default function SignupPage() {
                   type="tel"
                   value={form.phone}
                   onChange={(e) => update("phone", e.target.value)}
-                  placeholder="+92 300 1234567"
+                  placeholder="+91 300 1234567"
                 />
                 {errors.phone && (
                   <div style={{ color: "#fecaca", fontSize: 12, marginTop: 4 }}>
@@ -433,7 +481,41 @@ export default function SignupPage() {
                     {errors.password}
                   </div>
                 )}
-                {!errors.password && form.password && (
+
+                {/* 🔋 Password Strength Indicator */}
+                {form.password && (
+                  <div style={{ marginTop: 6 }}>
+                    <div
+                      style={{
+                        height: 6,
+                        borderRadius: 999,
+                        background: "rgba(148,163,184,0.6)",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${passwordStrength.percent}%`,
+                          height: "100%",
+                          background: passwordStrength.color,
+                          transition: "width 0.25s ease",
+                        }}
+                      />
+                    </div>
+                    <div
+                      style={{
+                        marginTop: 4,
+                        fontSize: 11,
+                        color: passwordStrength.color,
+                        fontWeight: 600,
+                      }}
+                    >
+                      {passwordStrength.label} password
+                    </div>
+                  </div>
+                )}
+
+                {!errors.password && !form.password && (
                   <div
                     style={{
                       fontSize: 11,
@@ -441,8 +523,8 @@ export default function SignupPage() {
                       marginTop: 4,
                     }}
                   >
-                    Tip: Use at least 1 number & 1 symbol for a stronger
-                    password.
+                    Tip: Use at least 8 characters, a mix of letters, numbers &
+                    symbols.
                   </div>
                 )}
               </div>
